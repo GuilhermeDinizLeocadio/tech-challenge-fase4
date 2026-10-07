@@ -1,0 +1,11 @@
+pandas==3.0.6
+pyarrow==25.0.1
+python-dotenv==1.2.4
+openai==3.26.0
+ipykernel==7.4.0
+matplotlib==3.11.2
+torch==2.14.1
+sentence-transformers==6.1.0
+chromadb==1.5.9
+bm25s==0.3.13
+streamlit==1.65.0

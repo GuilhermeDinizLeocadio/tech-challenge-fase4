@@ -1,0 +1,14 @@
+# Etapa 0 — base
+pandas
+pyarrow
+python-dotenv
+openai
+ipykernel
+matplotlib
+
+# Etapa 2+ (instaladas cedo para validar compatibilidade com Python 3.13)
+torch
+sentence-transformers
+chromadb
+bm25s
+streamlit
