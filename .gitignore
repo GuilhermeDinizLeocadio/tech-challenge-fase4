@@ -1,0 +1,13 @@
+# Ambiente
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Segredos — NUNCA versionar
+.env
+.streamlit/secrets.toml
+
+# Artefatos regeráveis / pesados
+data/processed/
+indice/
