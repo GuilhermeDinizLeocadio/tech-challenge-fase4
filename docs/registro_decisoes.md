@@ -37,7 +37,12 @@ Diário técnico do projeto. Cada entrada vira insumo para o README e para o ví
 
 ### Segurança
 - Chaves só no `.env` (ignorado pelo Git), com `.env.example` como molde.
-- Varredura antes de cada commit: `git diff --cached | Select-String "gsk_|AIza|AQ\.[A-Za-z0-9_-]{20,}"`.
+- Varredura antes de cada commit:
+  `git diff --cached | Select-String "gsk_[A-Za-z0-9]{20,}|AIza[A-Za-z0-9_-]{30,}|AQ\.[A-Za-z0-9_-]{20,}"`.
+- **Melhoria contínua:** a primeira versão do padrão procurava só o prefixo das chaves
+  (`gsk_`, `AIza`) e gerou um falso alarme ao encontrar o próprio comando documentado neste arquivo.
+  O padrão atual exige o prefixo seguido de dezenas de caracteres, como numa chave real, e
+  eliminou o falso positivo sem perder a detecção.
 
 ## Etapa 1 — EDA (13/10/2026)
 
