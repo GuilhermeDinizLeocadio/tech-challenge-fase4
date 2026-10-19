@@ -218,3 +218,66 @@ Cada avaliação com texto válido vira **um documento**:
   (citado como relato) do que o registro mostra (apresentado como dado), sem "corrigir" o cliente.
 - `dias_atraso` negativo indica entrega antes do prazo prometido; a frequência de valores negativos
   sugere prazos estimados folgados.
+
+
+  ## Etapa 2 — Embeddings e índices (19/10/2026)
+
+### Modelo de embedding
+| Opção | Português (MTEB-por) | Custo | Reprodução |
+|---|---|---|---|
+| **multilingual-e5-large-instruct** | **0,641** | grátis, local (CPU) | sem chave |
+| bge-m3 | 0,616 | grátis, local | sem chave |
+| multilingual-e5-base | menor (mesma família) | grátis, ~3x mais rápido | sem chave |
+| gemini-embedding-001 | melhor do ranking nativo | API grátis com limite diário | exige chave |
+
+- **Escolhido: multilingual-e5-large-instruct**, o melhor modelo aberto em português testado, sem
+  chave e sem custo. Critério definido antes da medição: manter se a indexação levasse até ~40 min
+  na CPU; medido 16 textos/s (estimativa de 36 min; real de 33 min).
+- **Pesos convertidos de float16 para float32:** o modelo é distribuído em meia precisão; na CPU,
+  float32 é o formato nativo e garante precisão para comparar similaridades muito próximas.
+- **Assimetria pergunta/documento:** perguntas recebem a instrução do e5-instruct; documentos entram
+  puros. As regras ficam num único módulo (`src/indexacao/embeddings.py`), usado na indexação e na
+  busca, para que perguntas e documentos estejam sempre no mesmo espaço vetorial.
+
+### Comportamento observado
+- **O embedding capta o assunto, não a polaridade:** para "o que reclamam do atraso?", o elogio
+  "chegou antes do prazo" (0,820) ficou praticamente empatado com uma reclamação real (0,826).
+  Isso justifica o reranker.
+- **Faixa de similaridade espremida:** até um texto irrelevante obteve 0,755. Um limiar de recusa
+  fixo não funciona; ele será calibrado com dados.
+
+### Banco vetorial e BM25
+- **Chroma:** filtro por metadados nativo, instalação com `pip`, persistência em pasta. Com ~35 mil
+  vetores, velocidade não é critério; simplicidade é.
+- **Distância l2 sobre vetores normalizados:** equivale à ordem por similaridade de cosseno
+  (similaridade = 1 − distância/2) e não depende de configurações que mudam entre versões.
+- **Metadados ausentes não são enviados ao Chroma** (que não aceita campos vazios); por exemplo,
+  `dias_atraso` de pedidos não entregues.
+- **BM25 (`bm25s`) sobre a `chave_texto`** (minúsculas, sem acento, sem pontuação), **sem remover
+  stopwords**: o BM25 já reduz o peso de palavras comuns, e listas de stopwords em português incluem
+  "não", que muda o sentido.
+
+### Construção (`src/indexacao/construir_indice.py`)
+- Embeddings só dos **34.956 textos distintos**; textos idênticos compartilham o mesmo vetor.
+- **Progresso salvo em 18 partes:** se interrompido, o script continua de onde parou.
+- Tempos num i5-10400 (CPU): embeddings 1.966 s, Chroma 38 s, BM25 1 s; total ~33 min.
+- `indice/manifesto.json` registra modelo, dimensão, precisão, quantidades e tempos.
+- O índice não é versionado no Git: é regerado pelo script.
+
+### Teste
+- "O produto chegou quebrado ou danificado?" → os 5 primeiros resultados tratam de produto quebrado
+  (notas 1–2; similaridade 0,922–0,930), incluindo textos com erro de digitação.
+- Dois dos 5 resultados eram o mesmo texto com pontuação diferente, o que confirma a necessidade de
+  colapsar textos idênticos na etapa de recuperação.
+
+  ### Teste dos índices (notebook 02, célula 4)
+- **Filtro de metadados:** "Quais problemas os clientes relatam sobre o produto?" com
+  `categoria_principal = cama mesa banho` e `nota <= 2` → 5 resultados da categoria, todos nota 1
+  (produto diferente do comprado, qualidade, cores erradas, não entrega).
+- **BM25 ("correios"):** todos os resultados contêm o termo, mas o 1º lugar é o texto "Correios",
+  de uma palavra. O BM25 favorece textos curtos, o que justifica combiná-lo com a busca por sentido
+  (híbrida) e com um reranker.
+- **Nota vs texto, de novo:** "Os correios atrasaram." (nota 5), "Problemas com os Correios"
+  (nota 5), "Correios não entregou" (nota 4). Parte dos clientes atribui o problema à transportadora
+  e não pune a loja na nota, o que reforça que problemas devem ser buscados pelo texto, não só pela
+  nota.

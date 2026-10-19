@@ -12,3 +12,4 @@ sentence-transformers
 chromadb
 bm25s
 streamlit
+ipywidgets
