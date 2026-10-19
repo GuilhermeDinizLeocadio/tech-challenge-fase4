@@ -281,3 +281,74 @@ Cada avaliação com texto válido vira **um documento**:
   (nota 5), "Correios não entregou" (nota 4). Parte dos clientes atribui o problema à transportadora
   e não pune a loja na nota, o que reforça que problemas devem ser buscados pelo texto, não só pela
   nota.
+
+  ## Etapa 3 — RAG básico (19/10/2026)
+
+### Recuperação (`src/rag/recuperacao.py`)
+- `Buscador` carrega modelo e índices uma vez (~11 s) e responde a várias buscas.
+- **Linguagem única de filtros** (`$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`), traduzida para o
+  Chroma e para o pandas, garantindo que as duas buscas avaliem o mesmo recorte.
+- **Fusão RRF** (k = 60, Cormack et al., 2009): combina posições em vez de notas, porque as notas da
+  busca densa (0–1) e do BM25 têm escalas diferentes.
+- **Colapso de textos idênticos** pela `chave_texto`, com a contagem de repetições no recorte filtrado.
+
+### A busca híbrida ingênua piorou o resultado
+- "Os produtos chegam com defeito ou quebrados?": a busca densa trouxe 8/8 resultados relevantes;
+  a híbrida, 5/8. O BM25 casou palavras comuns ("produtos", "chegam") e não casou "quebrados" com
+  "quebrado", porque não trata variações das palavras do português.
+- **Decisão:** a Etapa 3 usa a **busca densa como linha de base**. A híbrida será corrigida na
+  Etapa 5 (redução das palavras ao radical e pesos diferentes no RRF) e só será adotada se superar a
+  densa no conjunto de teste.
+
+### O problema das perguntas agregadas, observado
+- "O que os clientes mais elogiam?" (nota ≥ 4; 27.791 avaliações no recorte) trouxe textos que falam
+  de "clientes" e de "elogio", e não os elogios mais frequentes. A busca encontra textos parecidos com
+  a pergunta, mas não mede frequência.
+- Isso confirma a necessidade da camada de temas pré-computados com contagens reais (Etapa 6).
+
+### Linha de base (busca densa) e colapso
+- "O produto chegou quebrado" → 10/10 resultados relevantes (similaridade 0,928–0,946), incluindo
+  paráfrases ("veio quebrado", "uns parte quebrada", "entregue danifica").
+- O texto "O produto chegou quebrado" (2 cópias na base) ocupou **uma** posição, com repetições = 2.
+- **Limitação:** o colapso pega textos idênticos após padronização, não quase idênticos
+  ("Produto veio quebrado" e "o produto veio quebrado" ficaram separados). Possível melhoria
+  futura: agrupar por similaridade muito alta.
+
+  ### Geração (`src/rag/geracao.py`) e comparação de redatores
+- Contexto numerado [R#]: cabeçalho com metadados (registro do sistema) + texto entre aspas
+  (relato do cliente). Temperatura 0; espera e nova tentativa ao atingir o limite gratuito;
+  `reasoning_effort = low` no gpt-oss.
+- **Primeira resposta citada em 19/10/2026** (marco previsto para 25/10): 1,4 s, 1.890 tokens de
+  entrada, 0 citações inválidas.
+- **Comparação v1 (3 perguntas × 2 modelos):**
+
+| Critério | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Recusa fora do escopo | limpa | correta, seguida de conteúdo irrelevante |
+| Causa | afirmada pelo modelo ("devido a") | atribuída ao cliente ("é citada como") |
+| Trechos literais | raros | frequentes |
+| Interpretação sem fatos novos | melhor | pior |
+| Tokens de saída | ~290–325 | ~580–614 |
+
+- **Decisão:** gpt-oss-120b como redator provisório (recusa, custo, velocidade). A escolha final
+  será confirmada pela fidelidade medida pelo juiz na Etapa 4.
+- **Temperatura 0 não garante determinismo:** a mesma pergunta gerou respostas diferentes (17 e
+  13 citações). A avaliação será feita sobre respostas salvas em disco.
+
+### Prompt v2
+Ajustes motivados pelos erros observados na comparação:
+1. proibição de termos de frequência ("a maioria", "principalmente", "recorrente"...);
+2. uma ideia por ponto, citando só as avaliações que a mencionam;
+3. trechos literais entre aspas como prova;
+4. causas apenas quando relatadas e atribuídas ao cliente;
+5. relato do cliente separado do registro do sistema;
+6. recorte (filtros e tamanho) informado ao modelo e declarado na resposta;
+7. interpretação como hipótese, sem fatos novos;
+8. formato curto e exclusivo para recusas.
+
+Verificações automáticas no código: citações inválidas, termos de frequência e recusa.
+
+- **Limite de tokens por minuto:** na comparação (3 perguntas por modelo em ~1 minuto, ~2.500–2.800
+  tokens por chamada), o limite de 8 mil tokens/min do Groq foi atingido 2 vezes; a espera
+  automática de 20 s resolveu na 2ª tentativa. Na avaliação, as chamadas terão ritmo controlado
+  (≤ 2 por minuto por modelo, alternando modelos).
