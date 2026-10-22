@@ -12,6 +12,7 @@ Prompt v2: ajustes feitos após a comparação gpt-oss-120b x qwen3.8-27b (Etapa
 import os
 import re
 import time
+from difflib import SequenceMatcher
 
 import pandas as pd
 from dotenv import load_dotenv
@@ -43,6 +44,10 @@ TERMOS_FREQUENCIA = re.compile(
 
 # Trecho entre aspas (retas ou curvas), opcionalmente seguido de uma citação [R#]
 PADRAO_TRECHO = re.compile(r'[“"]([^”"]{3,}?)[”"]\s*(\[[^\]]+\])?')
+
+# Semelhança mínima (0 a 1) para um trecho citado contar como literal:
+# aceita erro de digitação corrigido ou palavra cortada completada; rejeita paráfrase
+LIMIAR_SEMELHANCA_TRECHO = 0.85
 
 PROMPT_SISTEMA = f"""Você é um analista de Voice of Customer de um e-commerce brasileiro.
 Responda à pergunta do gestor usando SOMENTE as avaliações de clientes fornecidas no contexto.
@@ -148,14 +153,28 @@ def extrair_citacoes(texto: str) -> list[str]:
     return citacoes
 
 
+def _trecho_presente(parte: str, alvo: str) -> bool:
+    """True se a parte aparece no alvo, exatamente ou com pequenas diferenças de grafia.
+
+    Desliza uma "janela" do tamanho do trecho sobre o texto e mede a semelhança (0 a 1).
+    """
+    if parte in alvo:
+        return True
+    n = len(parte)
+    melhor = max((SequenceMatcher(None, parte, alvo[i:i + n]).ratio()
+                  for i in range(max(1, len(alvo) - n + 1))), default=0.0)
+    return melhor >= LIMIAR_SEMELHANCA_TRECHO
+
+
 def verificar_trechos(texto: str, evidencias: pd.DataFrame) -> list[str]:
     """Confere se cada trecho entre aspas existe de fato no texto das avaliações.
 
     - Trecho seguido de citação ("..." [R12]): procura nas avaliações citadas, o que pega
       inclusive trecho atribuído à avaliação errada.
     - Trecho sem citação: procura em todo o contexto, incluindo nomes de categoria.
-    A comparação usa o texto padronizado (minúsculas, sem acento, sem pontuação), e trechos
-    com reticências são conferidos por partes.
+    A comparação usa o texto padronizado (minúsculas, sem acento, sem pontuação) e tolera
+    pequenas diferenças de grafia (erro de digitação corrigido, palavra cortada completada),
+    mas não paráfrases. Trechos com reticências são conferidos por partes.
     """
     chaves = dict(zip(evidencias["ref"], evidencias["chave_texto"]))
     categorias = [gerar_chave_texto(c) for c in evidencias["categoria_principal"].unique()]
@@ -166,7 +185,7 @@ def verificar_trechos(texto: str, evidencias: pd.DataFrame) -> list[str]:
         refs = [r for r in re.findall(r"R\d+", citacao or "") if r in chaves]
         alvo = " | ".join(chaves[r] for r in refs) if refs else contexto_todo
         partes = [gerar_chave_texto(p) for p in re.split(r"\.\.\.|…", trecho)]
-        if any(len(p) >= 3 and p not in alvo for p in partes):
+        if any(len(p) >= 3 and not _trecho_presente(p, alvo) for p in partes):
             nao_encontrados.append(trecho.strip())
     return nao_encontrados
 
