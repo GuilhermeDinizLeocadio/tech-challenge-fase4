@@ -71,7 +71,7 @@ Diário técnico do projeto. Cada entrada vira insumo para o README e para o ví
   base como documentos em branco.
 
 
-  ### Avaliações repetidas
+### Avaliações repetidas
 - **789 `review_id` aparecem em 1.603 linhas (814 linhas extras).** Nota, título, mensagem e data
   são idênticos; só o `order_id` muda (até 3 pedidos por avaliação). É a mesma avaliação ligada a
   pedidos diferentes, não avaliações distintas.
@@ -82,7 +82,7 @@ Diário técnico do projeto. Cada entrada vira insumo para o README e para o ví
 - **551 pedidos têm mais de uma avaliação** (`review_id` diferentes). São mantidas como opiniões
   distintas; o impacto é de cerca de 0,6% da base e fica registrado como limitação.
 
-  ### Notas e viés de escrita
+### Notas e viés de escrita
 | Nota | % das avaliações | % com texto |
 |---|---|---|
 | 1 | 11,5 | 77,3 |
@@ -116,7 +116,7 @@ Diário técnico do projeto. Cada entrada vira insumo para o README e para o ví
   - acentos removidos **só** no índice BM25 ("ótimo" e "otimo" viram a mesma palavra). O texto
     enviado ao modelo de embedding fica intacto.
 
-    ### Empresas anonimizadas (casas de Game of Thrones)
+### Empresas anonimizadas (casas de Game of Thrones)
 - 1.951 textos (4,6%) citam alguma casa: Lannister 1.177, Stark 292, Baratheon 269, Targaryen 213.
 - Pelo contexto, os nomes substituem lojas e parceiros ("lojas lannister", "targaryen parceira da
   lannister", atendimento do "baratheon").
@@ -137,7 +137,7 @@ Diário técnico do projeto. Cada entrada vira insumo para o README e para o ví
   itens faltando, "não recebido mas consta entregue", produto avariado, atraso, qualidade.
 
 
-  ### Entrega
+### Entrega
 - 96.478 pedidos entregues (97%); 2.965 sem data de entrega ao cliente (em trânsito, cancelados,
   indisponíveis).
 - **Situação da entrega por avaliação** (pior caso entre os pedidos ligados):
@@ -210,7 +210,7 @@ Cada avaliação com texto válido vira **um documento**:
   completa), o que confirma o viés de escrita.
 
 
-  ### Validação da ficha
+### Validação da ficha
 - A avaliação do cartucho HP (ligada a 2 pedidos) virou **um único documento**, com os 2 pedidos no
   campo `pedidos`.
 - **Percepção vs registro:** o cliente relata "atraso de mais de 15 dias", e o sistema registra 6
@@ -220,7 +220,7 @@ Cada avaliação com texto válido vira **um documento**:
   sugere prazos estimados folgados.
 
 
-  ## Etapa 2 — Embeddings e índices (19/10/2026)
+## Etapa 2 — Embeddings e índices (19/10/2026)
 
 ### Modelo de embedding
 | Opção | Português (MTEB-por) | Custo | Reprodução |
@@ -270,7 +270,7 @@ Cada avaliação com texto válido vira **um documento**:
 - Dois dos 5 resultados eram o mesmo texto com pontuação diferente, o que confirma a necessidade de
   colapsar textos idênticos na etapa de recuperação.
 
-  ### Teste dos índices (notebook 02, célula 4)
+### Teste dos índices (notebook 02, célula 4)
 - **Filtro de metadados:** "Quais problemas os clientes relatam sobre o produto?" com
   `categoria_principal = cama mesa banho` e `nota <= 2` → 5 resultados da categoria, todos nota 1
   (produto diferente do comprado, qualidade, cores erradas, não entrega).
@@ -281,3 +281,137 @@ Cada avaliação com texto válido vira **um documento**:
   (nota 5), "Correios não entregou" (nota 4). Parte dos clientes atribui o problema à transportadora
   e não pune a loja na nota, o que reforça que problemas devem ser buscados pelo texto, não só pela
   nota.
+
+## Etapa 3 — RAG básico (19/10/2026)
+
+### Recuperação (`src/rag/recuperacao.py`)
+- `Buscador` carrega modelo e índices uma vez (~11 s) e responde a várias buscas.
+- **Linguagem única de filtros** (`$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$in`), traduzida para o
+  Chroma e para o pandas, garantindo que as duas buscas avaliem o mesmo recorte.
+- **Fusão RRF** (k = 60, Cormack et al., 2009): combina posições em vez de notas, porque as notas da
+  busca densa (0–1) e do BM25 têm escalas diferentes.
+- **Colapso de textos idênticos** pela `chave_texto`, com a contagem de repetições no recorte filtrado.
+
+### A busca híbrida ingênua piorou o resultado
+- "Os produtos chegam com defeito ou quebrados?": a busca densa trouxe 8/8 resultados relevantes;
+  a híbrida, 5/8. O BM25 casou palavras comuns ("produtos", "chegam") e não casou "quebrados" com
+  "quebrado", porque não trata variações das palavras do português.
+- **Decisão:** a Etapa 3 usa a **busca densa como linha de base**. A híbrida será corrigida na
+  Etapa 5 (redução das palavras ao radical e pesos diferentes no RRF) e só será adotada se superar a
+  densa no conjunto de teste.
+
+### O problema das perguntas agregadas, observado
+- "O que os clientes mais elogiam?" (nota ≥ 4; 27.791 avaliações no recorte) trouxe textos que falam
+  de "clientes" e de "elogio", e não os elogios mais frequentes. A busca encontra textos parecidos com
+  a pergunta, mas não mede frequência.
+- Isso confirma a necessidade da camada de temas pré-computados com contagens reais (Etapa 6).
+
+### Linha de base (busca densa) e colapso
+- "O produto chegou quebrado" → 10/10 resultados relevantes (similaridade 0,928–0,946), incluindo
+  paráfrases ("veio quebrado", "uns parte quebrada", "entregue danifica").
+- O texto "O produto chegou quebrado" (2 cópias na base) ocupou **uma** posição, com repetições = 2.
+- **Limitação:** o colapso pega textos idênticos após padronização, não quase idênticos
+  ("Produto veio quebrado" e "o produto veio quebrado" ficaram separados). Possível melhoria
+  futura: agrupar por similaridade muito alta.
+
+### Geração (`src/rag/geracao.py`) e comparação de redatores
+- Contexto numerado [R#]: cabeçalho com metadados (registro do sistema) + texto entre aspas
+  (relato do cliente). Temperatura 0; espera e nova tentativa ao atingir o limite gratuito;
+  `reasoning_effort = low` no gpt-oss.
+- **Primeira resposta citada em 19/10/2026** (marco previsto para 25/10): 1,4 s, 1.890 tokens de
+  entrada, 0 citações inválidas.
+- **Comparação v1 (3 perguntas × 2 modelos):**
+
+| Critério | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Recusa fora do escopo | limpa | correta, seguida de conteúdo irrelevante |
+| Causa | afirmada pelo modelo ("devido a") | atribuída ao cliente ("é citada como") |
+| Trechos literais | raros | frequentes |
+| Interpretação sem fatos novos | melhor | pior |
+| Tokens de saída | ~290–325 | ~580–614 |
+
+- **Decisão:** gpt-oss-120b como redator provisório (recusa, custo, velocidade). A escolha final
+  será confirmada pela fidelidade medida pelo juiz na Etapa 4.
+- **Temperatura 0 não garante determinismo:** a mesma pergunta gerou respostas diferentes (17 e
+  13 citações). A avaliação será feita sobre respostas salvas em disco.
+
+### Prompt v2
+Ajustes motivados pelos erros observados na comparação:
+1. proibição de termos de frequência ("a maioria", "principalmente", "recorrente"...);
+2. uma ideia por ponto, citando só as avaliações que a mencionam;
+3. trechos literais entre aspas como prova;
+4. causas apenas quando relatadas e atribuídas ao cliente;
+5. relato do cliente separado do registro do sistema;
+6. recorte (filtros e tamanho) informado ao modelo e declarado na resposta;
+7. interpretação como hipótese, sem fatos novos;
+8. formato curto e exclusivo para recusas.
+
+Verificações automáticas no código: citações inválidas, trechos entre aspas inexistentes, termos de
+frequência e recusa.
+
+- **Limite de tokens por minuto:** na comparação (3 perguntas por modelo em ~1 minuto, ~2.500–2.800
+  tokens por chamada), o limite de 8 mil tokens/min do Groq foi atingido 2 vezes; a espera
+  automática de 20 s resolveu na 2ª tentativa. Na avaliação, as chamadas terão ritmo controlado
+  (≤ 2 por minuto por modelo, alternando modelos).
+
+
+  ### Resultados do prompt v2 (comparação nas mesmas 3 perguntas)
+- **Recusas perfeitas nos dois modelos:** frase padrão, motivo, sugestão, 0 citações (~90 tokens).
+  O Qwen deixou de preencher seções com conteúdo irrelevante.
+- **Recorte declarado** quando há filtros ("recorte de categoria cama mesa banho com nota ≤ 2").
+- **Registro rotulado como registro** ("segundo o registro, o pedido atrasou 42 dias"), separado
+  do relato do cliente entre aspas.
+- **Citações mais precisas:** 9 em vez de 13–17 na pergunta específica.
+- **Persistiram:** termos de frequência ("frequentemente", "recorrentes") e pontos que juntam mais
+  de uma ideia. Uma regra no prompt reduz, mas não elimina, esses hábitos do modelo.
+- **Custo e velocidade empataram** (~540–650 tokens de saída e 1,6–1,8 s nos dois modelos), porque
+  os trechos literais alongaram as respostas do gpt-oss.
+
+### Verificação automática de trechos literais
+- Cada trecho entre aspas é conferido no texto das avaliações citadas (ou em todo o contexto, se não
+  houver citação), com texto padronizado.
+- **Calibração com casos reais:** dos 4 trechos sinalizados na primeira versão, 2 eram erros reais
+  (1 trecho inventado, 1 paráfrase entre aspas) e 2 eram falsos alarmes (o modelo corrigiu
+  "qualilidade" e completou "condico", palavra cortada no texto do cliente).
+- **Tolerância por semelhança** (`difflib`, limiar 0,85): aceita pequenas diferenças de grafia e
+  rejeita paráfrases. Após o ajuste, só os 2 erros reais continuaram sinalizados. O limiar foi
+  escolhido em 4 casos e será reavaliado na Etapa 4.
+- **Caso de fronteira:** aspas de destaque numa palavra ("recebido") são sinalizadas embora não
+  enganem o leitor. Decisão adiada para a Etapa 4, com mais casos (possível regra: conferir só
+  trechos com 2 ou mais palavras).
+- **Achado:** textos cortados no meio da palavra ("boas condico") confirmam que o formulário da
+  Olist limitava o número de caracteres.
+
+### Mudança de redator provisório
+| Erro de fidelidade (prompt v2, 3 perguntas) | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Trecho inventado | 1 | 0 |
+| Paráfrase entre aspas | 1 | 0 |
+| Sentido invertido | 1 | 0 |
+
+- Com o prompt v2, recusa, custo e velocidade empataram; na fidelidade, critério principal do
+  enunciado, o Qwen teve 0 erros contra 3. **Redator provisório trocado para qwen3.8-27b**, com
+  confirmação pelo juiz na Etapa 4.
+
+### Interface de terminal (`src/rag/perguntar.py`)
+- `python -m src.rag.perguntar "pergunta" [--categoria] [--uf] [--regiao] [--entrega]
+  [--nota-min] [--nota-max] [--de AAAAMMDD] [--ate AAAAMMDD] [--k] [--modelo] [--modo]`.
+- Mostra a resposta, as **evidências citadas** (com `review_id`, nota, categoria, data, UF e texto
+  original) e as **verificações automáticas**.
+- **Testes (qwen3.8-27b):**
+  - "atrasos na entrega" (2,1 s): resposta útil, mas o verificador pegou dados do registro
+    ("atrasado (15 dias após o prazo)") colocados entre aspas como se fossem fala do cliente, além
+    de termos de frequência.
+  - "problemas" em cama mesa banho com nota ≤ 2: recorte declarado, contagens que batem com as
+    citações ("5 das avaliações"), registro e relato separados na mesma frase.
+  - "melhor celular para comprar em 2026": recusa correta, justificada pelas datas da base
+    (2017–2018).
+- **Próximo passo (Etapa 5):** os problemas que persistem são justamente os que o código detecta;
+  uma reescrita automática única, acionada pelas verificações, pode corrigi-los.
+
+### Correções de processo
+- **Valores duplicados no `.env`** (`LLM_MODELO=LLM_MODELO=...`): erro latente que nunca disparou
+  porque o modelo era passado explicitamente no código. Corrigido; o script de avaliação vai
+  conferir os nomes dos modelos antes de começar.
+- **Célula 4 do notebook 02 não salva antes do commit da Etapa 2:** restaurada com resultado
+  idêntico (a busca é determinística). Regra adotada: salvar todos os arquivos antes de `git add`.
