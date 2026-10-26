@@ -415,3 +415,43 @@ frequência e recusa.
   conferir os nomes dos modelos antes de começar.
 - **Célula 4 do notebook 02 não salva antes do commit da Etapa 2:** restaurada com resultado
   idêntico (a busca é determinística). Regra adotada: salvar todos os arquivos antes de `git add`.
+
+
+  ## Etapa 4 — Conjunto de teste e métricas (26/10/2026)
+
+### Conjunto de perguntas (`data/avaliacao/perguntas.json`)
+31 perguntas com gabarito de comportamento:
+
+| Tipo | Qtd. | Esperado | Objetivo |
+|---|---|---|---|
+| enunciado | 8 | responder | as perguntas exatas do enunciado, incluindo o desafio adicional |
+| especifica | 10 | responder | temas concretos, sem filtro |
+| filtro | 5 | responder | categoria, UF, região, período e situação da entrega |
+| fora_escopo | 4 | recusar | perguntas sem relação com avaliações |
+| sem_evidencia | 3 | recusar | temas plausíveis de e-commerce, inexistentes na base (criptomoedas, drones, realidade aumentada) |
+| evidencia_escassa | 1 | ressalvar | recorte com apenas 5 avaliações: responder citando-as e declarar o recorte pequeno |
+
+- Perguntas que pedem frequência ("principais", "mais elogiados") são marcadas como `agregada`:
+  são medidas já agora para servir de linha de base para a camada de temas (Etapa 6).
+- **Validação** (`src/avaliacao/validar_perguntas.py`): filtros e categorias existentes, tamanho de
+  cada recorte e conferência humana das perguntas que devem ser recusadas.
+
+### A similaridade sozinha não separa o que deve ser recusado
+| Esperado | sim_top1 mínima | média | máxima |
+|---|---|---|---|
+| recusar | 0,857 | 0,873 | 0,891 |
+| responder | 0,880 | 0,902 | 0,934 |
+
+- As faixas se sobrepõem: "drones" (deve recusar) obteve 0,891, acima de perguntas legítimas com
+  filtro (0,880). Um limiar de similaridade separaria no máximo 6 das 8 recusas, com margem de
+  0,001. Perguntas com filtro têm similaridade menor (recorte menor), e um limiar único as
+  puniria.
+- **Decisão:** o limiar de recusa será calibrado sobre a nota do reranker (Etapa 5).
+- **Exemplo para o vídeo:** "previsão do tempo para amanhã" casou com avaliações sobre "previsão de
+  entrega": o embedding captou a palavra, não o sentido.
+
+### Revisão do gabarito
+- A pergunta sobre entregas na região Norte em 2016 foi criada como "sem evidência", mas a
+  conferência humana mostrou 2 relatos reais entre as 5 avaliações do recorte. Ela passou a
+  `evidencia_escassa`, com comportamento esperado "ressalvar": recusar ignoraria evidência real;
+  responder sem ressalva generalizaria a partir de 5 avaliações.
