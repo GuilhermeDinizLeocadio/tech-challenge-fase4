@@ -1,0 +1,13 @@
+n,id,modelo,afirmacao,humano,juiz,consenso,pego_pelo_verificador
+1,P02,gpt-oss-120b,problema de comunicação entre os e‑mail enviados,sustentada,sustentada,sustentada,False
+2,P09,gpt-oss-120b,"Alguns clientes conseguem solução rápida após reclamação, enquanto outros não obtêm reposição.",sustentada,sustentada,parcial,False
+3,P02,gpt-oss-120b,Muita demora pra entregar,sustentada,sustentada,sustentada,False
+4,P15,gpt-oss-120b,Sugestão para sair da logística dos correios pois o serviço é um lixo.,sustentada,nao_sustentada,sustentada,False
+5,P04,gpt-oss-120b,Os clientes relataram itens incompletos ou danificados.,sustentada,sustentada,sustentada,False
+6,P17,gpt-oss-120b,"Há relatos recorrentes de dificuldade para trocar ou devolver produtos, incluindo processos burocráticos, falta de contato e demora.",nao_sustentada,nao_sustentada,nao_sustentada,False
+7,P02,gpt-oss-120b,Atrasado (15 dias após o prazo),sustentada,parcial,parcial,True
+8,P12,gpt-oss-120b,Adequação da embalagem: muito bem protegido por uma embalagem adequada.,sustentada,sustentada,sustentada,False
+9,P16,gpt-oss-120b,"Produto de qualidade, entrega antes do prazo previsto. Gostei.",parcial,sustentada,sustentada,False
+10,P03,qwen3.8-27b,O processo de compra é descrito como 'fácil' e 'eficiente'.,parcial,sustentada,sustentada,True
+11,P07,gpt-oss-120b,Os clientes destacam o bom custo-benefício e ótimo preço.,sustentada,sustentada,sustentada,False
+12,P17,gpt-oss-120b,não me dão soluções… não consigo fazer a troca,sustentada,sustentada,parcial,True
