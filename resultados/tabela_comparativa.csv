@@ -1,0 +1,3 @@
+config,modelo,respostas,comportamento_correto_%,sem_evidencia_recusadas_%,citacoes_invalidas,trechos_nao_encontrados,respostas_com_termos_freq,tokens_saida_medio,segundos_mediana,afirmacoes_auditadas,fidelidade_juiz_%,fidelidade_ajustada_%,nao_sustentadas_%,interpretacao_fatos_novos,responde_a_pergunta_media
+densa_k20_prompt_v2,gpt-oss-120b,31,96.7741935483871,100.0,0,31,10,369.8709677419355,1.5,183,95.62841530054645,89.61748633879782,1.092896174863388,0,4.92
+densa_k20_prompt_v2,qwen3.8-27b,31,100.0,100.0,0,5,13,394.4516129032258,1.5,150,95.33333333333333,94.0,2.0,2,5.0

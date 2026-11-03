@@ -455,3 +455,139 @@ frequência e recusa.
   conferência humana mostrou 2 relatos reais entre as 5 avaliações do recorte. Ela passou a
   `evidencia_escassa`, com comportamento esperado "ressalvar": recusar ignoraria evidência real;
   responder sem ressalva generalizaria a partir de 5 avaliações.
+
+
+  ### Gabarito da busca: rotulagem de relevância pelo juiz
+- **Pooling:** para cada pergunta, os candidatos das buscas densa e híbrida (até 50 de cada; ~75
+  distintos) foram rotulados pelo juiz (`gemini-3.5-flash-lite`): 2 = responde diretamente,
+  1 = mesmo assunto mas não responde, 0 = sem relação. Instrução: "na dúvida entre 2 e 1, escolha 1".
+- 2.222 rótulos em 91 chamadas, sem erros (lotes de 25; 1 chamada a cada 4,5 s; cada rótulo salvo
+  ao chegar em `resultados/relevancia.jsonl`, versionado para reprodução sem custo).
+- **Coerência:** perguntas a recusar quase sem nota 2 (0 nas de faturamento, tempo, criptomoedas e
+  realidade aumentada). Em "drones", 64 avaliações nota 1 (falam de entrega) e nenhuma nota 2: a
+  escala de 3 níveis separou "mesmo assunto" de "responde".
+- **Limitação:** o recall é relativo aos candidatos rotulados, não à base inteira.
+
+### Métricas da busca (24 perguntas a responder/ressalvar, K = 20)
+| Métrica | Densa | Híbrida ingênua |
+|---|---|---|
+| Precisão@20 | **0,821** | 0,702 |
+| Hit@5 | 0,958 | **1,000** |
+| MRR | **0,965** | 0,958 |
+| Recall@20 (relativo) | **0,357** | 0,310 |
+
+- A híbrida ingênua envia 12 pontos a mais de contexto irrelevante ao LLM, o que confirma com
+  números a decisão da Etapa 3. Mas ela acerta uma pergunta em que a densa falha: a correção da
+  híbrida (Etapa 5) se justifica.
+- Precisão@20 da densa por tipo: filtro 1,000; enunciado 0,881; específica 0,725; evidência
+  escassa 0,400 (o máximo possível: 2 relevantes num recorte de 5).
+- Perguntas a recusar recebem em média 6,6 "iscas" (nota 1) entre as 20 avaliações enviadas.
+
+### Falhas da busca densa e técnicas a testar na Etapa 5
+| Falha | Pergunta | Precisão@20 | Técnica |
+|---|---|---|---|
+| Pergunta "meta" ("quais avaliações sustentam a conclusão de que...") | P05 | 0,45 (hit@5 = 0) | reescrita da pergunta |
+| Condição específica ("atendimento ao tentar resolver um problema") | P13, P11 | 0,25 / 0,35 | reranker |
+| Termo exato ("Correios") | P15 | 0,50 | híbrida corrigida |
+
+### Validação do juiz de relevância
+- 21 pares estratificados (7 por nota do juiz, incluindo os 2 casos suspeitos), notas humanas dadas
+  às cegas.
+
+| Medida | 1ª rodada (às cegas) | Após consenso |
+|---|---|---|
+| Concordância exata | 52% | 86% |
+| Concordância relevante/não | 57% | 90% |
+| Kappa de Cohen | 0,29 | 0,79 |
+
+- **1ª rodada:** nas 10 discordâncias, o humano tendeu a dar nota 2 a avaliações positivas ou
+  genéricas quando a pergunta pedia algo específico (drones, realidade aumentada, Lannister), o que
+  revelou uma aplicação ambígua da régua.
+- **Consenso** (adjudicação das discordâncias): o juiz estava correto em 7, o humano em 2 (um caso
+  de juiz exigente demais e um de juiz generoso demais) e 1 caso era ambíguo. Os erros residuais do
+  juiz não têm viés para um lado.
+- **Ressalvas:** amostra de 21 pares; consenso feito com revisão assistida e apenas nos pares
+  discordantes, o que tende a otimizar o número final. Por isso os dois resultados são reportados.
+
+  ### Geração das respostas da linha de base (`src/avaliacao/gerar_respostas.py`)
+- 31 perguntas × 2 redatores = 62 respostas, salvas com as evidências usadas em
+  `resultados/respostas/densa_k20_prompt_v2.jsonl`. Sem erros e sem atingir o limite de uso.
+- **Comparação justa:** uma busca por pergunta; as mesmas 20 evidências vão para os dois modelos.
+- **Ritmo controlado:** chamadas alternadas entre os modelos, com 30 s entre duas chamadas ao
+  mesmo modelo.
+
+| Medida | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Comportamento correto (recusar/responder) | 97% (30/31) | **100%** (31/31) |
+| Sem evidência (drones, cripto, realidade aumentada) | 100% | 100% |
+| Citações inválidas | 0 | 0 |
+| Trechos não encontrados | 31 | **5** |
+| Respostas com termos de frequência | **10** | 13 |
+| Tokens de saída (média) / tempo (mediana) | 370 / 1,5 s | 394 / 1,5 s |
+
+- **Falha de comportamento:** o gpt-oss reinterpretou "Como configurar um roteador?" (pedido de
+  instrução) como "o que os clientes dizem sobre configurar Wi-Fi" e respondeu, em vez de recusar.
+- **Análise dos trechos sinalizados:**
+  - Qwen: 1 erro real (dado do registro entre aspas) e 4 falsos alarmes (aspas de destaque,
+    inserção editorial entre colchetes, termos da própria pergunta citados numa recusa).
+  - gpt-oss (amostra de 10): 6 eram dados do **registro** do sistema ("60 dias após o prazo",
+    "pedido não entregue") apresentados entre aspas como fala do cliente; 4 eram costuras ou
+    paráfrases com reticências.
+- **Decisões para a Etapa 5:** refinar o verificador (ignorar trechos presentes na pergunta, remover
+  inserções entre colchetes, classificar "registro citado como relato" à parte) e separar
+  visualmente registro e relato no contexto. A linha de base será recalculada com o verificador
+  refinado sobre as respostas salvas, para que antes e depois usem a mesma régua.
+- A regra "conferir só trechos com 2 ou mais palavras" **não foi adotada**: apenas 1 de 36 trechos
+  sinalizados tinha uma palavra.
+
+
+  ### Fidelidade: o juiz confere cada afirmação (`src/avaliacao/avaliar_fidelidade.py`)
+- Para cada resposta não recusada (24 do Qwen, 25 do gpt-oss), o juiz recebe o mesmo contexto do
+  redator e dá um veredito a cada afirmação: sustentada, parcial ou não sustentada. Também avalia
+  fatos novos na interpretação, se a resposta responde à pergunta (1 a 5) e se declara limitação de
+  evidência. 49 auditorias, 333 afirmações, sem erros.
+- **Suspeita de leniência:** fidelidade de ~95% nos dois modelos, nota ~5 até nas perguntas
+  agregadas, e respostas aprovadas por inteiro apesar de conterem dados do registro entre aspas,
+  que o verificador por código tinha sinalizado.
+
+### Validação do juiz de fidelidade
+- 12 afirmações (amostra enviesada para casos de risco: 6 "sustentadas" de respostas com trechos
+  sinalizados, 3 de respostas limpas, 3 parciais/não sustentadas), vereditos humanos às cegas e
+  depois consenso com os textos originais lado a lado.
+
+| Medida | Valor |
+|---|---|
+| Juiz x consenso | 75% (9 de 12) |
+| Leniência (juiz "sustentada", consenso não) | 2 de 9 (22%) |
+| ...pegas pelo verificador por código | 1 de 2 |
+| Juiz exigente demais | 1 |
+
+- Os 2 casos lenientes eram do gpt-oss: um trecho com parte inventada (pego pelo verificador) e
+  uma **inversão de sentido** ("outros não obtêm reposição", citando um cliente que escreveu "não tô
+  solicitando outro produto nem a devolução"), a mesma avaliação e o mesmo erro vistos na Etapa 3.
+- **Nenhum mecanismo isolado é suficiente:** a primeira leitura humana também aprovou os dois casos;
+  só a releitura com os textos lado a lado os revelou.
+
+### Fidelidade ajustada e tabela da linha de base (`src/avaliacao/relatorio.py`)
+- **Fidelidade ajustada:** uma afirmação "sustentada" pelo juiz que contém um trecho não encontrado
+  pelo verificador é rebaixada para "parcial". Cada mecanismo cobre a fraqueza do outro.
+
+| Medida (densa, K = 20, prompt v2) | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Comportamento correto | 96,8% | **100%** |
+| Sem evidência recusadas | 100% | 100% |
+| Trechos não encontrados | 31 | **5** |
+| Respostas com termos de frequência | **10** | 13 |
+| Fidelidade (juiz) | 95,6% | 95,3% |
+| **Fidelidade ajustada** | 89,6% | **94,0%** |
+| Não sustentadas | **1,1%** | 2,0% |
+| Interpretação com fatos novos | **0** | 2 |
+| Tokens de saída / tempo | 370 / 1,5 s | 394 / 1,5 s |
+
+- **Decisão: qwen3.8-27b confirmado como redator.** Vence nos critérios centrais do enunciado
+  (comportamento diante de falta de evidência e fidelidade), com custo e tempo equivalentes.
+- **Limitações declaradas:** o juiz de fidelidade é leniente com erros sutis (seus números são um
+  teto); inversões de sentido não são detectadas por nenhum mecanismo automático do projeto;
+  validações com amostras pequenas (21 e 12 casos).
+- A tabela é gerada a partir de todas as configurações salvas: cada melhoria da Etapa 5 entra como
+  uma nova coluna, medida com a mesma régua.
