@@ -591,3 +591,42 @@ frequência e recusa.
   validações com amostras pequenas (21 e 12 casos).
 - A tabela é gerada a partir de todas as configurações salvas: cada melhoria da Etapa 5 entra como
   uma nova coluna, medida com a mesma régua.
+
+
+  ## Etapa 5 — Melhorias medidas
+
+### Estratégia
+Melhorias na busca são medidas offline, com os rótulos de relevância da Etapa 4 (sem custo de API);
+só a melhor configuração passa pela geração de respostas e pelo juiz de fidelidade.
+
+### Reranker (`BAAI/bge-reranker-v2-m3`, cross-encoder local)
+- Lê a pergunta junto com cada um dos 50 primeiros candidatos (já sem textos repetidos) e reordena
+  pela nota de relevância. Atuar só nos 50 primeiros garante que todo candidato já tem rótulo.
+- Escolha: multilíngue e forte em português, local e sem chave, compatível com o
+  `sentence-transformers`. Critério definido antes de medir: até 10 s por pergunta.
+
+| Configuração | Precisão@20 | Hit@5 | MRR | Recall@20 | Tempo (mediana) |
+|---|---|---|---|---|---|
+| densa | 0,821 | 0,958 | 0,965 | 0,357 | 0,16 s |
+| híbrida ingênua | 0,702 | 1,000 | 0,958 | 0,310 | 0,14 s |
+| **densa + reranker** | **0,896** | **1,000** | **0,979** | **0,402** | 5,03 s |
+| híbrida + reranker | 0,865 | 1,000 | 0,958 | 0,392 | 4,47 s |
+
+- Maior ganho nas perguntas específicas (precisão 0,725 → 0,870): o embedding capta o assunto, o
+  reranker capta o detalhe da pergunta. P09 (quebrados) e P11 (itens faltando) foram a 1,00; a
+  P05 ("meta") passou a ter avaliação relevante entre as 5 primeiras.
+- **Não resolvida:** P13 ("atendimento ao tentar resolver um problema", 0,25 → 0,20). O reranker só
+  reordena os candidatos da primeira busca; se eles não contêm avaliações relevantes, não há o que
+  reordenar → reescrita da pergunta (parte 2).
+- **P15 ("Correios"):** 0,70 com densa + reranker, 0,90 com híbrida + reranker → termos exatos se
+  beneficiam do BM25 → híbrida corrigida (parte 2).
+
+### Recusa calibrada pelo reranker: descartada com base em dados
+- A nota do reranker na 1ª avaliação ficou entre 0,000 e 0,009 nas perguntas a recusar, mas
+  perguntas legítimas agregadas ou genéricas tiveram notas iguais ou menores (P06 "principais
+  reclamações" 0,002, a mesma de "entrega por drones"; P22 0,004; P01 0,005).
+- Motivo: o reranker mede se UMA avaliação responde à pergunta; perguntas sobre o conjunto não são
+  respondidas por nenhuma avaliação isolada.
+- Decisão: sem porteiro por limiar. O redator já recusa corretamente 100% das perguntas sem
+  evidência; um limiar recusaria perguntas do próprio enunciado. Além disso, com 31 perguntas,
+  qualquer limiar seria ajustado na própria prova.

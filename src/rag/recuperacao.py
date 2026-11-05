@@ -1,13 +1,16 @@
-"""Etapa 3 — Recuperação: busca por sentido (Chroma) e, opcionalmente, por palavras (BM25).
+"""Recuperação: busca por sentido (Chroma), por palavras (BM25) e reranker (cross-encoder).
 
-Modos:
-- "densa"   (padrão): só busca por sentido. É a linha de base da Etapa 3.
+Modos de busca:
+- "densa"   (padrão): só busca por sentido. Linha de base da Etapa 3.
 - "hibrida": sentido + BM25 fundidos por RRF (Reciprocal Rank Fusion), que combina POSIÇÕES em
-             vez de notas, porque cada busca tem uma escala própria. Será corrigida e medida na
-             Etapa 5 (o BM25 sem tratamento de plural piorou os resultados no teste inicial).
+             vez de notas, porque cada busca tem uma escala própria.
 
-Em ambos os modos, textos idênticos são colapsados num só (com a contagem de repetições)
-para não ocupar o contexto com evidências duplicadas.
+Reranker (opcional, Etapa 5): um cross-encoder lê a pergunta JUNTO com cada um dos 50 primeiros
+candidatos e dá uma nota de relevância; os candidatos são reordenados por essa nota antes da
+escolha dos K finais. É mais preciso que a comparação de vetores, mas lento demais para a base
+inteira, por isso atua só sobre os finalistas.
+
+Em todos os casos, textos idênticos são colapsados num só (com a contagem de repetições).
 
 Filtros usam uma linguagem única, traduzida para o Chroma e para o pandas (BM25):
     {"nota": {"$lte": 2}, "categoria_principal": "cama mesa banho"}
@@ -21,6 +24,7 @@ import bm25s
 import chromadb
 import numpy as np
 import pandas as pd
+from sentence_transformers import CrossEncoder
 
 from src.indexacao.embeddings import carregar_modelo, preparar_pergunta
 from src.ingestao.construir_corpus import gerar_chave_texto
@@ -29,9 +33,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 INDICE = RAIZ / "indice"
 CORPUS = RAIZ / "data" / "processed" / "corpus.parquet"
 
-K_CANDIDATOS = 50  # quantos resultados cada busca traz antes da fusão
+K_CANDIDATOS = 50  # quantos resultados cada busca traz antes da fusão (e quantos o reranker lê)
 K_RRF = 60         # constante padrão do RRF (Cormack et al., 2009)
 PADRAO_TOKEN = re.compile(r"(?u)\b\w\w+\b")  # mesmo critério de "palavra" usado pelo bm25s
+
+MODELO_RERANKER = "BAAI/bge-reranker-v2-m3"
+LOTE_RERANKER = 16  # pares (pergunta, avaliação) processados por vez
 
 COLUNAS_EVIDENCIA = ["texto", "nota", "categoria_principal", "situacao_entrega", "dias_atraso",
                      "data_compra", "uf", "empresas_citadas", "chave_texto"]
@@ -85,6 +92,21 @@ class Buscador:
         ids_bm25 = pd.read_parquet(INDICE / "bm25_ids.parquet")["review_id"]
         # Corpus na MESMA ordem do índice BM25 (o BM25 identifica documentos pela posição)
         self.corpus = pd.read_parquet(CORPUS).set_index("review_id").loc[ids_bm25]
+        self._reranker = None  # carregado só no primeiro uso (~2 GB)
+
+    @property
+    def reranker(self) -> CrossEncoder:
+        if self._reranker is None:
+            modelo = CrossEncoder(MODELO_RERANKER, device="cpu")
+            getattr(modelo, "model", modelo).float()  # garante float32 na CPU
+            self._reranker = modelo
+        return self._reranker
+
+    def pontuar_reranker(self, pergunta: str, candidatos: pd.DataFrame) -> pd.Series:
+        """Nota do cross-encoder para cada par (pergunta, avaliação)."""
+        pares = [(pergunta, texto) for texto in candidatos["texto"]]
+        notas = self.reranker.predict(pares, batch_size=LOTE_RERANKER, show_progress_bar=False)
+        return pd.Series(np.asarray(notas, dtype=float), index=candidatos.index)
 
     def busca_densa(self, pergunta: str, filtros: dict | None = None,
                     k: int = K_CANDIDATOS) -> pd.DataFrame:
@@ -122,11 +144,12 @@ class Buscador:
         })
 
     def buscar(self, pergunta: str, filtros: dict | None = None, k_final: int = 20,
-               modo: str = "densa") -> pd.DataFrame:
-        """Recupera evidências e colapsa textos idênticos.
+               modo: str = "densa", reranquear: bool = False) -> pd.DataFrame:
+        """Recupera evidências, colapsa textos idênticos e, se pedido, reordena pelo reranker.
 
-        modo="densa"   -> só busca por sentido (padrão; linha de base da Etapa 3)
-        modo="hibrida" -> sentido + BM25 fundidos por RRF (a ser corrigida e medida na Etapa 5)
+        modo="densa"   -> só busca por sentido (padrão)
+        modo="hibrida" -> sentido + BM25 fundidos por RRF
+        reranquear     -> os 50 primeiros candidatos são reordenados pelo cross-encoder
         """
         if modo not in ("densa", "hibrida"):
             raise ValueError(f"modo inválido: {modo}")
@@ -144,6 +167,12 @@ class Buscador:
 
         # Textos idênticos viram UMA evidência: fica a mais bem posicionada
         fundido = fundido.drop_duplicates("chave_texto", keep="first")
+
+        # Reranker: lê pergunta + avaliação juntas nos 50 primeiros e reordena
+        if reranquear and not fundido.empty:
+            fundido = fundido.head(K_CANDIDATOS).copy()
+            fundido["score_rerank"] = self.pontuar_reranker(pergunta, fundido)
+            fundido = fundido.sort_values("score_rerank", ascending=False)
 
         # Quantas vezes cada texto aparece no universo filtrado ("aparece N vezes")
         universo = self.corpus[filtro_para_mascara(self.corpus, filtros)]
