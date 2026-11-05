@@ -1,13 +1,21 @@
-"""Etapa 3 — Geração: monta o contexto numerado e pede ao LLM uma resposta citada.
+"""Etapas 3 e 5 — Geração: monta o contexto numerado e pede ao LLM uma resposta citada.
 
 O LLM recebe só as evidências recuperadas, numeradas [R1], [R2]..., o recorte consultado
 (filtros e tamanho) e regras que o obrigam a: usar apenas esse contexto, citar cada ponto,
 não inventar frequências nem causas, separar relato do cliente de registro do sistema e
 recusar quando as evidências não bastam. Depois, o código confere automaticamente:
-citações inexistentes, trechos entre aspas que não existem nas avaliações, termos de
-frequência proibidos e se houve recusa.
+citações inexistentes, trechos entre aspas, termos de frequência proibidos e se houve recusa.
 
-Prompt v2: ajustes feitos após a comparação gpt-oss-120b x qwen3.8-27b (Etapa 3).
+Versões do prompt e do contexto:
+- v2 (Etapa 3): ajustes feitos após a comparação gpt-oss-120b x qwen3.8-27b.
+- v3 (Etapa 5): o contexto rotula "Registro do sistema" e "Texto do cliente" e o prompt restringe
+  as aspas ao texto do cliente, sem costurar frases (erro dominante encontrado na Etapa 4).
+
+Verificador de trechos:
+- v1 (verificar_trechos, Etapa 3): mantido sem mudanças, para comparação.
+- v2 (classificar_trechos, Etapa 5): ignora inserções editoriais [entre colchetes], separa
+  trechos que são termos da própria pergunta e trechos que vêm do REGISTRO apresentados como
+  fala do cliente.
 """
 import os
 import re
@@ -35,6 +43,7 @@ PARAMETROS_EXTRAS = {
 }
 
 FRASE_RECUSA = "As avaliações recuperadas não são suficientes para responder a esta pergunta."
+VERSAO_PADRAO = "v2"
 
 # Termos que indicam frequência na base inteira, proibidos pela regra 4 (verificados no código)
 TERMOS_FREQUENCIA = re.compile(
@@ -45,11 +54,36 @@ TERMOS_FREQUENCIA = re.compile(
 # Trecho entre aspas (retas ou curvas), opcionalmente seguido de uma citação [R#]
 PADRAO_TRECHO = re.compile(r'[“"]([^”"]{3,}?)[”"]\s*(\[[^\]]+\])?')
 
+# Inserção editorial dentro de uma citação, ex.: "produtos [são] originais"
+PADRAO_INSERCAO = re.compile(r"\[[^\]]*\]")
+
 # Semelhança mínima (0 a 1) para um trecho citado contar como literal:
 # aceita erro de digitação corrigido ou palavra cortada completada; rejeita paráfrase
 LIMIAR_SEMELHANCA_TRECHO = 0.85
 
-PROMPT_SISTEMA = f"""Você é um analista de Voice of Customer de um e-commerce brasileiro.
+REGRA_3 = {
+    "v2": """3. Sempre que possível, inclua um trecho curto e literal da avaliação entre aspas
+   (até 12 palavras) como prova do ponto.""",
+    "v3": """3. Sempre que possível, inclua um trecho curto e literal do TEXTO DO CLIENTE entre aspas
+   (até 12 palavras), copiado como está, sem juntar pedaços de frases diferentes.
+   Use aspas SOMENTE para trechos do texto do cliente.""",
+}
+
+REGRA_6 = {
+    "v2": """6. Relato x registro: o texto entre aspas no contexto é o RELATO do cliente; os campos do
+   cabeçalho (nota, entrega, dias de atraso, categoria, UF, data) são o REGISTRO do sistema.
+   Ao usar um dado do cabeçalho, diga que é registro ("segundo o registro, o pedido atrasou
+   6 dias [R2]"). Se relato e registro divergirem, mostre os dois sem corrigir o cliente.""",
+    "v3": """6. Relato x registro: cada avaliação traz o "Registro do sistema" (nota, entrega, dias de
+   atraso, categoria, UF, data) e o "Texto do cliente" (o relato). Nunca coloque dados do
+   registro entre aspas nem os apresente como fala do cliente; ao usá-los, diga que são
+   registro ("segundo o registro, o pedido atrasou 6 dias [R2]"). Se relato e registro
+   divergirem, mostre os dois sem corrigir o cliente.""",
+}
+
+
+def _montar_prompt(versao: str) -> str:
+    return f"""Você é um analista de Voice of Customer de um e-commerce brasileiro.
 Responda à pergunta do gestor usando SOMENTE as avaliações de clientes fornecidas no contexto.
 
 Regras obrigatórias:
@@ -57,8 +91,7 @@ Regras obrigatórias:
 2. Cada ponto deve conter UMA ideia e citar SOMENTE as avaliações que mencionam essa ideia,
    no formato [R1] ou [R2, R5]. Não repita a mesma ideia em pontos diferentes.
    Cite apenas referências que existem no contexto.
-3. Sempre que possível, inclua um trecho curto e literal da avaliação entre aspas
-   (até 12 palavras) como prova do ponto.
+{REGRA_3[versao]}
 4. Frequência: você vê apenas uma amostra de avaliações escolhidas por semelhança com a
    pergunta, não a base inteira. NÃO use "a maioria", "principalmente", "frequentemente",
    "recorrente", "sistêmico" nem porcentagens. Prefira "N das avaliações recuperadas"
@@ -66,10 +99,7 @@ Regras obrigatórias:
 5. Causas: só mencione a causa de um problema se a própria avaliação citada mencionar essa
    causa, e atribua ao cliente ("os clientes atribuem a quebra à embalagem [R3]").
    Nunca deduza causas por conta própria.
-6. Relato x registro: o texto entre aspas no contexto é o RELATO do cliente; os campos do
-   cabeçalho (nota, entrega, dias de atraso, categoria, UF, data) são o REGISTRO do sistema.
-   Ao usar um dado do cabeçalho, diga que é registro ("segundo o registro, o pedido atrasou
-   6 dias [R2]"). Se relato e registro divergirem, mostre os dois sem corrigir o cliente.
+{REGRA_6[versao]}
 7. Os nomes Stark, Lannister, Targaryen e Baratheon são nomes de empresas anonimizados pela
    base (lojas, parceiros ou transportadoras). Trate-os como empresas, nunca como personagens.
 8. Recorte: o contexto informa os filtros e a quantidade de avaliações consultadas. Quando
@@ -99,6 +129,10 @@ FORMATO DE RECUSA (use somente este, sem as outras seções):
 **O que esta base consegue responder:** uma frase sugerindo perguntas sobre experiências de
 compra (produto, entrega, atendimento, loja)."""
 
+
+PROMPTS = {versao: _montar_prompt(versao) for versao in ("v2", "v3")}
+PROMPT_SISTEMA = PROMPTS["v2"]  # compatibilidade com o código das etapas anteriores
+
 NOMES_OPERADORES = {"$eq": "=", "$ne": "≠", "$gt": ">", "$gte": "≥",
                     "$lt": "<", "$lte": "≤", "$in": "em"}
 
@@ -120,21 +154,31 @@ def _descrever_entrega(linha: pd.Series) -> str:
     return str(situacao)
 
 
-def formatar_contexto(evidencias: pd.DataFrame) -> str:
-    """Transforma as evidências em blocos numerados: cabeçalho (registro) + texto (relato)."""
+def _registro(e: pd.Series) -> str:
+    """Os campos do REGISTRO do sistema de uma avaliação, em uma linha."""
+    data = str(e["data_compra"])
+    return (f"nota {e['nota']} | categoria: {e['categoria_principal']} | "
+            f"entrega: {_descrever_entrega(e)} | compra: {data[:4]}-{data[4:6]} | UF: {e['uf']}")
+
+
+def formatar_contexto(evidencias: pd.DataFrame, versao: str = VERSAO_PADRAO) -> str:
+    """Transforma as evidências em blocos numerados: registro do sistema + relato do cliente.
+
+    v2: cabeçalho + texto entre aspas. v3: os dois rotulados explicitamente.
+    """
     blocos = []
     for _, e in evidencias.iterrows():
-        data = str(e["data_compra"])
-        cabecalho = (f"[{e['ref']}] nota {e['nota']} | categoria: {e['categoria_principal']} | "
-                     f"entrega: {_descrever_entrega(e)} | compra: {data[:4]}-{data[4:6]} | "
-                     f"UF: {e['uf']}")
-        if e["repeticoes"] > 1:
-            cabecalho += f" | aparece {e['repeticoes']}x"
-        blocos.append(f'{cabecalho}\n"{e["texto"]}"')
+        repeticoes = f" | aparece {e['repeticoes']}x" if e["repeticoes"] > 1 else ""
+        if versao == "v3":
+            blocos.append(f"[{e['ref']}] Registro do sistema: {_registro(e)}{repeticoes}\n"
+                          f'Texto do cliente: "{e["texto"]}"')
+        else:
+            blocos.append(f'[{e["ref"]}] {_registro(e)}{repeticoes}\n"{e["texto"]}"')
     return "\n\n".join(blocos)
 
 
-def montar_mensagem_usuario(pergunta: str, evidencias: pd.DataFrame) -> str:
+def montar_mensagem_usuario(pergunta: str, evidencias: pd.DataFrame,
+                            versao: str = VERSAO_PADRAO) -> str:
     total = evidencias.attrs.get("documentos_no_filtro")
     filtros = evidencias.attrs.get("filtros")
     tamanho = f"{total:,} avaliações com texto" if total is not None else "tamanho não informado"
@@ -142,7 +186,7 @@ def montar_mensagem_usuario(pergunta: str, evidencias: pd.DataFrame) -> str:
             f"Recorte consultado: {descrever_filtros(filtros)} ({tamanho}).\n"
             f"Evidências: {len(evidencias)} avaliações recuperadas, as mais parecidas com a "
             f"pergunta dentro do recorte.\n\n"
-            f"{formatar_contexto(evidencias)}")
+            f"{formatar_contexto(evidencias, versao)}")
 
 
 def extrair_citacoes(texto: str) -> list[str]:
@@ -167,8 +211,9 @@ def _trecho_presente(parte: str, alvo: str) -> bool:
 
 
 def verificar_trechos(texto: str, evidencias: pd.DataFrame) -> list[str]:
-    """Confere se cada trecho entre aspas existe de fato no texto das avaliações.
+    """VERIFICADOR v1 (Etapa 3), mantido sem mudanças para comparação.
 
+    Confere se cada trecho entre aspas existe de fato no texto das avaliações.
     - Trecho seguido de citação ("..." [R12]): procura nas avaliações citadas, o que pega
       inclusive trecho atribuído à avaliação errada.
     - Trecho sem citação: procura em todo o contexto, incluindo nomes de categoria.
@@ -190,6 +235,46 @@ def verificar_trechos(texto: str, evidencias: pd.DataFrame) -> list[str]:
     return nao_encontrados
 
 
+def classificar_trechos(texto: str, evidencias: pd.DataFrame, pergunta: str = "") -> dict:
+    """VERIFICADOR v2 (Etapa 5): classifica cada trecho entre aspas que não está no relato.
+
+    Mesma comparação do v1 (texto padronizado, tolerância a grafia, partes separadas por
+    reticências), com três refinamentos:
+    - inserções editoriais [entre colchetes] são removidas antes de comparar;
+    - trecho que é termo da própria pergunta (ex.: numa recusa) vai para "trechos_da_pergunta";
+    - trecho que está no REGISTRO do sistema (cabeçalho) vai para "registro_como_relato".
+    O que sobra são os "trechos_nao_encontrados" de fato.
+    """
+    chaves = dict(zip(evidencias["ref"], evidencias["chave_texto"]))
+    registros = {e["ref"]: gerar_chave_texto(_registro(e)) for _, e in evidencias.iterrows()}
+    categorias = [gerar_chave_texto(c) for c in evidencias["categoria_principal"].unique()]
+    contexto_todo = " | ".join(list(chaves.values()) + categorias)
+    registro_todo = " | ".join(registros.values())
+    chave_pergunta = gerar_chave_texto(pergunta) if pergunta else ""
+
+    resultado = {"trechos_nao_encontrados": [], "registro_como_relato": [],
+                 "trechos_da_pergunta": []}
+    for trecho, citacao in PADRAO_TRECHO.findall(texto):
+        limpo = PADRAO_INSERCAO.sub(" ", trecho)
+        partes = [gerar_chave_texto(p) for p in re.split(r"\.\.\.|…", limpo)]
+        partes = [p for p in partes if len(p) >= 3]
+        if not partes:
+            continue
+        refs = [r for r in re.findall(r"R\d+", citacao or "") if r in chaves]
+        alvo = " | ".join(chaves[r] for r in refs) if refs else contexto_todo
+        if all(_trecho_presente(p, alvo) for p in partes):
+            continue  # trecho literal do relato: correto
+        if chave_pergunta and all(p in chave_pergunta for p in partes):
+            resultado["trechos_da_pergunta"].append(trecho.strip())
+            continue
+        alvo_registro = " | ".join(registros[r] for r in refs) if refs else registro_todo
+        if all(_trecho_presente(p, alvo_registro) for p in partes):
+            resultado["registro_como_relato"].append(trecho.strip())
+        else:
+            resultado["trechos_nao_encontrados"].append(trecho.strip())
+    return resultado
+
+
 def criar_cliente(provedor: str) -> OpenAI:
     base_url, var_chave = PROVEDORES[provedor]
     chave = os.getenv(var_chave) if var_chave else "ollama"
@@ -199,12 +284,14 @@ def criar_cliente(provedor: str) -> OpenAI:
 
 
 def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None = None,
-                   provedor: str = "groq", tentativas: int = 3) -> dict:
+                   provedor: str = "groq", tentativas: int = 3,
+                   versao_prompt: str = VERSAO_PADRAO) -> dict:
     """Chama o LLM e devolve a resposta com métricas e verificações automáticas."""
     modelo = modelo or os.getenv("LLM_MODELO")
     cliente = criar_cliente(provedor)
-    mensagens = [{"role": "system", "content": PROMPT_SISTEMA},
-                 {"role": "user", "content": montar_mensagem_usuario(pergunta, evidencias)}]
+    mensagens = [{"role": "system", "content": PROMPTS[versao_prompt]},
+                 {"role": "user",
+                  "content": montar_mensagem_usuario(pergunta, evidencias, versao_prompt)}]
 
     for tentativa in range(1, tentativas + 1):
         try:
@@ -226,13 +313,15 @@ def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None =
     texto = (resposta.choices[0].message.content or "").strip()
     citacoes = extrair_citacoes(texto)
     validas = set(evidencias["ref"])
+    trechos = classificar_trechos(texto, evidencias, pergunta)
     return {
         "modelo": modelo,
+        "versao_prompt": versao_prompt,
         "resposta": texto,
         "recusou": FRASE_RECUSA in texto,
         "citacoes": sorted(set(citacoes), key=lambda r: int(r[1:])),
         "citacoes_invalidas": sorted({c for c in citacoes if c not in validas}),
-        "trechos_nao_encontrados": verificar_trechos(texto, evidencias),
+        **trechos,
         "termos_frequencia": sorted({t.lower() for t in TERMOS_FREQUENCIA.findall(texto)}),
         "tokens_entrada": resposta.usage.prompt_tokens if resposta.usage else None,
         "tokens_saida": resposta.usage.completion_tokens if resposta.usage else None,

@@ -673,3 +673,26 @@ rodada.
   as agregadas fica para a Etapa 6 (camada de temas).
 - Recusas sem piora (iscas 5,9 → 6,0). Tempo: ~5,3 s por busca + uma chamada ao LLM para reescrever.
 - **Decisão: busca final = densa + reescrita + reranker.**
+
+
+### Verificador refinado (v2) e linha de base recalculada (parte 3a)
+- `classificar_trechos` separa os trechos entre aspas que não estão no relato em três categorias:
+  inexistentes, **registro citado como relato** (dados do cabeçalho entre aspas como fala do
+  cliente) e **termos da própria pergunta** (ex.: numa recusa). Inserções editoriais
+  [entre colchetes] são removidas antes de comparar. O verificador v1 foi mantido.
+- O relatório recalcula v1 e v2 a partir das respostas salvas: todas as configurações passam a ser
+  medidas com a mesma régua, sem nova chamada à API. O v1 recalculado bate com a Etapa 4 (31 e 5).
+
+| Linha de base (densa, prompt v2) | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Trechos sinalizados (v1) | 31 | 5 |
+| Inexistentes (v2) | 19 | 1 |
+| Registro citado como relato (v2) | 12 | 1 |
+| Termos da pergunta (v2, falsos alarmes) | 0 | 2 |
+| Fidelidade ajustada com v1 → v2 | 89,6% → 89,6% | 94,0% → 94,7% |
+
+- Dos 5 sinalizados do Qwen, só 2 eram erros reais, de tipos diferentes.
+- A categoria "registro citado como relato" é um limite inferior: só é reconhecida quando o trecho
+  se parece com o texto do cabeçalho ("pedido não entregue" não casa com "entrega: não entregue").
+- A fidelidade ajustada passa a usar o v2: falsos alarmes deixam de rebaixar afirmações corretas,
+  e todo erro real continua contando.
