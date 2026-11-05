@@ -1,10 +1,12 @@
-"""Etapa 4 — Rotula a relevância das avaliações recuperadas para cada pergunta de teste.
+"""Etapas 4 e 5 — Rotula a relevância das avaliações recuperadas para cada pergunta de teste.
 
-Método de "pooling": para cada pergunta, junta os candidatos das buscas que serão comparadas
-(densa e híbrida, até 50 de cada) e pede ao juiz uma nota para cada um:
+Método de "pooling": para cada pergunta, junta os candidatos das buscas que serão comparadas e
+pede ao juiz uma nota para cada um:
   2 = ajuda a responder diretamente à pergunta
   1 = mesmo assunto geral, mas não responde
   0 = sem relação
+Pool: top-50 das buscas densa e híbrida (Etapa 4) + top-20 de cada configuração nova da Etapa 5
+(as avaliações que ela mandaria ao LLM).
 Textos idênticos (mesma chave_texto) são rotulados uma vez só. Os rótulos são salvos em
 resultados/relevancia.jsonl assim que chegam; rodar de novo só rotula os pares ainda não vistos.
 
@@ -18,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.avaliacao.configuracoes import NOVAS, executar
 from src.avaliacao.juiz import Juiz
 from src.avaliacao.validar_perguntas import carregar_perguntas
 from src.rag.geracao import descrever_filtros
@@ -26,6 +29,7 @@ from src.rag.recuperacao import Buscador
 RAIZ = Path(__file__).resolve().parents[2]
 ARQUIVO_ROTULOS = RAIZ / "resultados" / "relevancia.jsonl"
 K_POOL = 50         # candidatos de cada busca (densa e híbrida) por pergunta
+K_NOVAS = 20        # candidatos de cada configuração nova da Etapa 5
 TAMANHO_LOTE = 25   # avaliações por chamada ao juiz
 
 PROMPT_RELEVANCIA = """Você avalia a relevância de avaliações de clientes de um e-commerce
@@ -53,11 +57,13 @@ def carregar_rotulos() -> dict[tuple[str, str], int]:
 
 
 def montar_pool(buscador: Buscador, pergunta: dict) -> pd.DataFrame:
-    """Candidatos distintos das buscas densa e híbrida para uma pergunta."""
+    """Candidatos distintos das buscas densa e híbrida (top-50 de cada) e das configurações
+    novas da Etapa 5 (top-20 de cada, as avaliações que elas mandariam ao LLM)."""
     filtros = pergunta.get("filtros")
     densa = buscador.buscar(pergunta["pergunta"], filtros=filtros, k_final=K_POOL, modo="densa")
     hibrida = buscador.buscar(pergunta["pergunta"], filtros=filtros, k_final=K_POOL, modo="hibrida")
-    return (pd.concat([densa, hibrida])[["chave_texto", "texto"]]
+    novas = [executar(buscador, pergunta, nome, K_NOVAS) for nome in NOVAS]
+    return (pd.concat([densa, hibrida, *novas])[["chave_texto", "texto"]]
               .drop_duplicates("chave_texto").reset_index(drop=True))
 
 

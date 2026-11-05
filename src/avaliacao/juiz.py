@@ -6,7 +6,7 @@ import os
 import time
 
 from dotenv import load_dotenv
-from openai import RateLimitError
+from openai import APIConnectionError, APITimeoutError, InternalServerError, RateLimitError
 
 from src.rag.geracao import criar_cliente
 
@@ -14,6 +14,9 @@ load_dotenv()
 
 PROVEDOR_JUIZ = "gemini"
 INTERVALO_MINIMO = 4.5  # segundos entre chamadas (~13 por minuto, abaixo do limite de 15)
+
+# Erros passageiros: limite de uso (429), servidor sobrecarregado (5xx) e falhas de conexão
+ERROS_TEMPORARIOS = (RateLimitError, InternalServerError, APIConnectionError, APITimeoutError)
 
 
 def extrair_json(texto: str) -> dict:
@@ -47,7 +50,7 @@ class Juiz:
             time.sleep(espera)
         self._ultima_chamada = time.monotonic()
 
-    def avaliar_json(self, sistema: str, usuario: str, tentativas: int = 4) -> dict:
+    def avaliar_json(self, sistema: str, usuario: str, tentativas: int = 5) -> dict:
         """Chama o juiz e devolve a resposta já convertida de JSON para dicionário."""
         for tentativa in range(1, tentativas + 1):
             self._respeitar_ritmo()
@@ -59,9 +62,9 @@ class Juiz:
                 )
                 self.chamadas += 1
                 return extrair_json(resposta.choices[0].message.content or "")
-            except RateLimitError:
+            except ERROS_TEMPORARIOS as erro:
                 espera = 30 * tentativa
-                print(f"   limite do juiz atingido; aguardando {espera}s "
+                print(f"   juiz indisponível ({type(erro).__name__}); aguardando {espera}s "
                       f"(tentativa {tentativa}/{tentativas})", flush=True)
                 time.sleep(espera)
             except ValueError as erro:  # inclui JSON inválido (json.JSONDecodeError)

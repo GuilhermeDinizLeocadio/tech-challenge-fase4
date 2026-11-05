@@ -8,7 +8,7 @@ e calcula (relevante = nota 2 do juiz):
   recall@K    relevantes nas K / relevantes entre todos os candidatos rotulados (relativo ao pool)
 Para perguntas que devem ser recusadas, interessam as "iscas": avaliações de nota 1 (mesmo
 assunto, mas não respondem). Nas configurações com reranker, também registra a nota do reranker
-na 1ª avaliação (para calibrar a recusa) e o tempo de cada busca.
+na 1ª avaliação e o tempo de cada busca. As configurações vêm de src/avaliacao/configuracoes.py.
 
 Uso (na raiz do projeto):
     python -m src.avaliacao.metricas_busca
@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.avaliacao.configuracoes import CONFIGURACOES, executar
 from src.avaliacao.rotular_relevancia import carregar_rotulos
 from src.avaliacao.validar_perguntas import carregar_perguntas
 from src.rag.recuperacao import Buscador
@@ -27,12 +28,7 @@ from src.rag.recuperacao import Buscador
 RAIZ = Path(__file__).resolve().parents[2]
 SAIDA = RAIZ / "resultados" / "metricas_busca.csv"
 K = 20
-CONFIGURACOES = {
-    "densa": {"modo": "densa"},
-    "hibrida_ingenua": {"modo": "hibrida"},
-    "densa_rerank": {"modo": "densa", "reranquear": True},
-    "hibrida_rerank": {"modo": "hibrida", "reranquear": True},
-}
+PERGUNTAS_QUE_FALHAVAM = ["P05", "P09", "P11", "P13", "P14", "P15"]
 
 
 def calcular(notas: list[int], relevantes_no_pool: int) -> dict:
@@ -63,9 +59,9 @@ def main() -> None:
     linhas, sem_rotulo = [], 0
     for p in perguntas:
         relevantes_no_pool = por_pergunta[p["id"]][2]
-        for nome, opcoes in CONFIGURACOES.items():
+        for nome in CONFIGURACOES:
             inicio = time.perf_counter()
-            evid = buscador.buscar(p["pergunta"], filtros=p.get("filtros"), k_final=K, **opcoes)
+            evid = executar(buscador, p, nome, K)
             segundos = time.perf_counter() - inicio
             notas = []
             for chave in evid["chave_texto"]:
@@ -88,27 +84,31 @@ def main() -> None:
     if sem_rotulo:
         print(f"\nAviso: {sem_rotulo} avaliações sem rótulo foram tratadas como irrelevantes.")
 
+    pd.set_option("display.width", 220)
     metricas = ["precisao@20", "hit@5", "mrr", "recall@20"]
     responder = tabela[tabela["esperado"] != "recusar"]
     print("\nPERGUNTAS A RESPONDER (média por configuração):")
     print(responder.groupby("config", sort=False)[metricas].mean().round(3).to_string())
 
     print("\nPrecisão@20 por tipo de pergunta:")
-    print(responder.pivot_table(index="tipo", columns="config", values="precisao@20",
-                                aggfunc="mean").round(3).to_string())
+    print(responder.pivot_table(index="config", columns="tipo", values="precisao@20",
+                                aggfunc="mean", sort=False).round(3).to_string())
+
+    print("\nPrecisão@20 nas perguntas agregadas x não agregadas:")
+    print(responder.pivot_table(index="config", columns="agregada", values="precisao@20",
+                                aggfunc="mean", sort=False).round(3).to_string())
 
     print("\nPERGUNTAS A RECUSAR (média por pergunta nas 20 enviadas ao LLM):")
     recusar = tabela[tabela["esperado"] == "recusar"]
     print(recusar.groupby("config", sort=False)[["relevantes_top20", "iscas_top20"]]
           .mean().round(1).to_string())
 
-    print("\nTempo médio por busca (segundos):")
-    print(tabela.groupby("config", sort=False)["segundos_busca"].mean().round(2).to_string())
+    print("\nTempo por busca (segundos, mediana):")
+    print(tabela.groupby("config", sort=False)["segundos_busca"].median().round(2).to_string())
 
-    com_rerank = tabela[tabela["config"].str.contains("rerank")]
-    print("\nNota do reranker na 1ª avaliação, por comportamento esperado:")
-    print(com_rerank.groupby(["config", "esperado"])["score_top1"]
-          .describe()[["count", "min", "mean", "max"]].round(3).to_string())
+    print("\nPrecisão@20 nas perguntas que falhavam na Etapa 4:")
+    print(tabela.pivot_table(index="config", columns="id", values="precisao@20", sort=False)
+          [PERGUNTAS_QUE_FALHAVAM].round(2).to_string())
 
     print(f"\nDetalhe por pergunta salvo em {SAIDA.relative_to(RAIZ)}")
 

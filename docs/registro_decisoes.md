@@ -630,3 +630,46 @@ só a melhor configuração passa pela geração de respostas e pelo juiz de fid
 - Decisão: sem porteiro por limiar. O redator já recusa corretamente 100% das perguntas sem
   evidência; um limiar recusaria perguntas do próprio enunciado. Além disso, com 31 perguntas,
   qualquer limiar seria ajustado na própria prova.
+
+
+  ### Híbrida corrigida e reescrita da pergunta (parte 2)
+- **Híbrida corrigida:** BM25 com radicais (PyStemmer, português: "quebrado", "quebrados" e
+  "quebrou" → "quebr") e peso 0,5 na fusão (definido antes de medir).
+- **Reescrita da pergunta** (`src/rag/reescrita.py`): o LLM escreve 3 frases como clientes
+  escreveriam; a 1ª busca usa pergunta + frases, o reranker julga pela pergunta original.
+  Reescritas salvas em `resultados/reescritas.json` (avaliação reprodutível).
+  - **Prompt v1** (guardado em `reescritas_v1.json`), inspecionado antes de medir: invertia a
+    polaridade ("atraso" ganhava "chegou antes do previsto"), perdia termos da pergunta ("Correios",
+    "Lannister") e inventava clientes para perguntas fora do assunto ("previsão do tempo").
+  - **Prompt v2** (revisão única, por princípios gerais): manter a polaridade e os termos da
+    pergunta; `SEM_REESCRITA` quando a pergunta não trata de experiências de clientes (aplicado a
+    faturamento, celular, roteador e previsão do tempo).
+- Rotulagem incremental: só os pares novos foram ao juiz (240 rótulos, 2.462 no total).
+
+| Configuração (24 perguntas a responder) | Precisão@20 | Hit@5 | MRR | Recall@20* |
+|---|---|---|---|---|
+| densa | 0,821 | 0,958 | 0,965 | 0,305 |
+| híbrida ingênua | 0,702 | 1,000 | 0,958 | 0,266 |
+| híbrida corrigida | 0,827 | 0,958 | 0,917 | 0,308 |
+| densa + reranker | 0,896 | 1,000 | 0,979 | 0,339 |
+| híbrida + reranker | 0,865 | 1,000 | 0,958 | 0,329 |
+| híbrida corrigida + reranker | 0,896 | 1,000 | 0,979 | 0,339 |
+| **densa + reescrita + reranker** | **0,935** | **1,000** | **0,979** | **0,368** |
+
+\* Recall relativo ao pool de rotulagem, que cresceu nesta etapa: só comparável dentro da mesma
+rodada.
+
+- **Perguntas que falhavam** (densa → + reranker → + reescrita): P05 0,45 → 0,60 → 0,90;
+  P13 0,25 → 0,20 → 0,55; P14 0,60 → 0,80 → 1,00; P15 0,50 → 0,70 → 1,00.
+  A reescrita resolveu o que o reranker não alcançava: melhorou a 1ª busca (P13) e, mantendo o
+  termo "Correios", tornou a busca por palavras desnecessária (P15). P13 segue a mais difícil.
+- **Híbrida descartada, com explicação matemática:** com peso 0,5 e RRF k = 60, a 1ª colocada só
+  do BM25 vale 0,5/61 ≈ 0,0082, menos que a 50ª da densa (1/110 ≈ 0,0091). O BM25 nunca traz
+  candidata nova ao top-50, só reordena; com o reranker, o resultado é idêntico ao da densa.
+  Sem reranker, a correção funcionou (0,702 → 0,827), mas não supera a densa. Outros pesos não
+  foram testados para não ajustar o sistema à prova; o motivo da híbrida (P15) já foi resolvido.
+- **Custo da reescrita nas agregadas:** precisão 0,98 → 0,93 nas agregadas e 0,874 → 0,937 nas
+  demais. É o viés de confirmação previsto (a reescrita busca o que o LLM supõe); a decisão sobre
+  as agregadas fica para a Etapa 6 (camada de temas).
+- Recusas sem piora (iscas 5,9 → 6,0). Tempo: ~5,3 s por busca + uma chamada ao LLM para reescrever.
+- **Decisão: busca final = densa + reescrita + reranker.**
