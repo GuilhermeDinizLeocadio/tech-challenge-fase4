@@ -696,3 +696,59 @@ rodada.
   se parece com o texto do cabeçalho ("pedido não entregue" não casa com "entrega: não entregue").
 - A fidelidade ajustada passa a usar o v2: falsos alarmes deixam de rebaixar afirmações corretas,
   e todo erro real continua contando.
+
+
+  ### Fluxo completo no código (parte 3b)
+- `src/rag/pipeline.py`: função única `responder` (reescrita → busca → reranker → resposta),
+  usada pela linha de comando e, na Etapa 8, pela interface, para que todos os caminhos sigam o
+  mesmo fluxo. Se a reescrita falhar (limite de uso, servidor fora do ar), a busca continua só
+  com a pergunta original: a resposta pode piorar um pouco, mas o sistema não para.
+- Linha de comando: o fluxo vencedor passou a ser o padrão, com `--sem-reescrita`,
+  `--sem-reranker` e `--prompt` para reproduzir as configurações anteriores.
+- Geração e auditoria passaram a receber as configurações no comando; o juiz recebe o contexto no
+  mesmo formato (v2, v3 ou v4) que o redator recebeu.
+- Teste na P13 (a pergunta mais difícil da prova): resposta equilibrada, separando problemas
+  resolvidos rapidamente de demora, falta de retorno e telefones sem atendimento, com trechos
+  literais e todas as verificações automáticas limpas.
+
+### Isolando o efeito da busca e do prompt (parte 3c)
+- Duas configurações novas, só com o Qwen e com as mesmas evidências por pergunta: busca nova +
+  prompt v2 (isola o efeito da busca) e busca nova + prompt v3 (isola o efeito do prompt).
+
+| Medida (Qwen) | Linha de base | Busca nova + v2 | Busca nova + v3 |
+|---|---|---|---|
+| Comportamento correto | 100% | 100% | 100% |
+| Trechos não encontrados (v2) | 1 | 2 | 2 |
+| Registro citado como relato | 1 | 0 | 0 |
+| Respostas com termos de frequência | 13 | 12 | 10 |
+| Respostas com contagem | 18 | 24 | 24 |
+| Fidelidade ajustada | 94,7% | 91,7% | 86,3% |
+
+- **Tempos não comparáveis:** com duas chamadas seguidas ao mesmo modelo e intervalo de 25 s, a
+  reserva de tokens do Groq (entrada + máximo de saída) estourou o limite por minuto e a
+  biblioteca esperou sozinha, inflando o cronômetro (medianas de 8,6 s e 5,3 s). O tempo real de
+  geração segue em ~1,5 s. Intervalo aumentado para 35 s.
+
+### Diagnóstico: a queda da fidelidade vinha das contagens
+- A fidelidade caiu justamente com a busca melhor. A inspeção das justificativas do juiz
+  (`src/avaliacao/inspecionar_fidelidade.py`) mostrou que 9 de 11 (v2) e 16 de 19 (v3) afirmações
+  não sustentadas eram **contagens** que não batiam com as citações ("8 das avaliações
+  recuperadas" citando 2; "18" citando 19; "9 das 20" sem citação). O juiz estava certo.
+- **Causa:** a regra 4 do prompt (Etapa 3) sugeria "N das avaliações recuperadas" como alternativa
+  a "a maioria". Com a busca melhor, quase todas as 20 evidências são relevantes, e o modelo passou
+  a contar números grandes citando só exemplos.
+- **Problema conceitual:** mesmo correta, a contagem é frequência disfarçada. A busca escolhe as
+  avaliações pelo assunto; dizer que "18 das 20 mencionam entrega antes do prazo" mede a busca, não
+  os clientes. Frequências reais exigem contar na base inteira (Etapa 6).
+- Fora as contagens, restaram 2 (v2) e 3 (v3) erros de conteúdo em mais de 130 afirmações cada,
+  todos de citação trocada ou fraca.
+
+### Prompt v4 e detector de contagens
+- **Prompt v4** = v3 com a regra 4 reescrita: proíbe contar avaliações ou clientes da amostra e
+  usar porcentagens; a única quantidade permitida é o "aparece Nx", que conta textos idênticos no
+  recorte inteiro.
+- **Detector de contagens no código** (`encontrar_contagens`, fora da seção Limitações), seguindo a
+  lição da Etapa 4 de não confiar só no prompt. Validado nas respostas salvas: as contagens já
+  apareciam em 18 das 24 respostas não recusadas da linha de base e em todas as 24 com a busca nova.
+- Meta do v4: respostas com contagem perto de zero e fidelidade de volta ao patamar da linha de
+  base ou acima.
