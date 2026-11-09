@@ -1,3 +1,5 @@
-config,modelo,respostas,comportamento_correto_%,sem_evidencia_recusadas_%,citacoes_invalidas,trechos_v1,trechos_nao_encontrados_v2,registro_como_relato_v2,trechos_da_pergunta_v2,respostas_com_termos_freq,tokens_saida_medio,segundos_mediana,afirmacoes_auditadas,fidelidade_juiz_%,fidelidade_ajustada_%,nao_sustentadas_%,interpretacao_fatos_novos,responde_a_pergunta_media
-densa_k20_prompt_v2,gpt-oss-120b,31,96.7741935483871,100.0,0,31,19,12,0,10,369.8709677419355,1.5,183,95.62841530054645,89.61748633879782,1.092896174863388,0,4.92
-densa_k20_prompt_v2,qwen3.8-27b,31,100.0,100.0,0,5,1,1,2,13,394.4516129032258,1.5,150,95.33333333333333,94.66666666666667,2.0,2,5.0
+config,modelo,respostas,comportamento_correto_%,sem_evidencia_recusadas_%,citacoes_invalidas,trechos_v1,trechos_nao_encontrados_v2,registro_como_relato_v2,trechos_da_pergunta_v2,respostas_com_termos_freq,respostas_com_contagem,tokens_saida_medio,segundos_mediana,afirmacoes_auditadas,fidelidade_juiz_%,fidelidade_ajustada_%,nao_sustentadas_%,interpretacao_fatos_novos,responde_a_pergunta_media
+densa_k20_prompt_v2,gpt-oss-120b,31,96.7741935483871,100.0,0,31,19,12,0,10,12,369.8709677419355,1.5,183,95.62841530054645,89.61748633879782,1.092896174863388,0,4.92
+densa_k20_prompt_v2,qwen3.8-27b,31,100.0,100.0,0,5,1,1,2,13,18,394.4516129032258,1.5,150,95.33333333333333,94.66666666666667,2.0,2,5.0
+reescrita_rerank_k20_prompt_v2,qwen3.8-27b,31,100.0,100.0,0,4,2,0,2,12,24,391.3225806451613,8.6,133,91.72932330827068,91.72932330827068,1.5037593984962405,1,5.0
+reescrita_rerank_k20_prompt_v3,qwen3.8-27b,31,100.0,100.0,0,4,2,0,2,10,24,399.48387096774195,5.3,139,86.33093525179856,86.33093525179856,0.0,1,5.0

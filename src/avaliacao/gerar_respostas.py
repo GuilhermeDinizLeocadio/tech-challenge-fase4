@@ -7,7 +7,7 @@ mínimo por modelo (limite de tokens por minuto da camada gratuita do Groq). Cad
 assim que chega, junto com as evidências usadas; rodar de novo pula o que já foi gerado.
 
 Uso (na raiz do projeto), com uma ou mais configurações:
-    python -m src.avaliacao.gerar_respostas reescrita_rerank_k20_prompt_v2 reescrita_rerank_k20_prompt_v3
+    python -m src.avaliacao.gerar_respostas reescrita_rerank_k20_prompt_v4
 """
 import json
 import sys
@@ -25,7 +25,7 @@ from src.rag.recuperacao import Buscador
 RAIZ = Path(__file__).resolve().parents[2]
 PASTA = RAIZ / "resultados" / "respostas"
 K = 20
-INTERVALO_POR_MODELO = 25  # segundos entre duas chamadas ao mesmo modelo
+INTERVALO_POR_MODELO = 35  # segundos entre duas chamadas ao mesmo modelo (25 s causou esperas)
 QWEN, GPT_OSS = "qwen/qwen3.8-27b", "openai/gpt-oss-120b"
 
 CONFIGS = {
@@ -34,8 +34,11 @@ CONFIGS = {
     # Etapa 5: busca nova com o prompt antigo (isola o efeito da busca)...
     "reescrita_rerank_k20_prompt_v2": {"busca": "densa_reescrita_rerank", "versao_prompt": "v2",
                                        "modelos": [QWEN]},
-    # ...e com o prompt novo (isola o efeito do prompt)
+    # ...com o prompt v3 (registro e relato rotulados; isola o efeito do prompt)...
     "reescrita_rerank_k20_prompt_v3": {"busca": "densa_reescrita_rerank", "versao_prompt": "v3",
+                                       "modelos": [QWEN]},
+    # ...e com o prompt v4 (sem contagens dentro da amostra)
+    "reescrita_rerank_k20_prompt_v4": {"busca": "densa_reescrita_rerank", "versao_prompt": "v4",
                                        "modelos": [QWEN]},
 }
 
@@ -44,7 +47,7 @@ COLUNAS_EVIDENCIA = ["ref", "review_id", "chave_texto", "texto", "nota", "catego
                      "score_rerank"]
 CAMPOS_RESULTADO = ["versao_prompt", "resposta", "recusou", "citacoes", "citacoes_invalidas",
                     "trechos_nao_encontrados", "registro_como_relato", "trechos_da_pergunta",
-                    "termos_frequencia", "tokens_entrada", "tokens_saida", "segundos"]
+                    "termos_frequencia", "contagens", "tokens_entrada", "tokens_saida", "segundos"]
 
 
 def conferir_modelos(modelos: set[str]) -> None:
@@ -81,6 +84,7 @@ def imprimir_resumo(config: str) -> None:
     t["n_trechos"] = contar("trechos_nao_encontrados")
     t["n_registro"] = contar("registro_como_relato")
     t["com_termos"] = contar("termos_frequencia") > 0
+    t["com_contagem"] = contar("contagens") > 0
 
     resumo = t.groupby("modelo").agg(
         respostas=("id", "size"),
@@ -89,6 +93,7 @@ def imprimir_resumo(config: str) -> None:
         trechos_nao_encontrados=("n_trechos", "sum"),
         registro_como_relato=("n_registro", "sum"),
         respostas_com_termos_frequencia=("com_termos", "sum"),
+        respostas_com_contagem=("com_contagem", "sum"),
         tokens_saida_medio=("tokens_saida", "mean"),
         segundos_mediana=("segundos", "median"),
     )

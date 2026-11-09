@@ -3,10 +3,12 @@
 Lê todas as configurações salvas em resultados/respostas/ (e a auditoria correspondente em
 resultados/fidelidade/, quando existir) e monta uma tabela com uma linha por (configuração, modelo).
 
-Os verificadores de trechos são RECALCULADOS a partir das respostas e evidências salvas, para que
+Os verificadores automáticos são RECALCULADOS a partir das respostas e evidências salvas, para que
 todas as configurações sejam medidas com a mesma régua (sem chamar a API de novo):
-- v1 (Etapa 3): trechos entre aspas que não estão nas avaliações;
-- v2 (Etapa 5): separa trechos inexistentes, registro citado como relato e termos da pergunta.
+- trechos v1 (Etapa 3): trechos entre aspas que não estão nas avaliações;
+- trechos v2 (Etapa 5): separa trechos inexistentes, registro citado como relato e termos da
+  pergunta;
+- contagens (Etapa 5): "8 das avaliações", "três clientes", porcentagens (fora das Limitações).
 
 Fidelidade ajustada: uma afirmação que o juiz considerou "sustentada", mas que contém um trecho
 sinalizado pelo verificador v2 (inexistente ou registro citado como relato), é rebaixada para
@@ -22,7 +24,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.ingestao.construir_corpus import gerar_chave_texto
-from src.rag.geracao import classificar_trechos, verificar_trechos
+from src.rag.geracao import classificar_trechos, encontrar_contagens, verificar_trechos
 
 RAIZ = Path(__file__).resolve().parents[2]
 PASTA_RESPOSTAS = RAIZ / "resultados" / "respostas"
@@ -48,11 +50,12 @@ def contem_trecho_sinalizado(afirmacao: str, trechos: list[str]) -> bool:
 
 
 def verificar(r: dict) -> dict:
-    """Recalcula os verificadores v1 e v2 a partir da resposta e das evidências salvas."""
+    """Recalcula os verificadores a partir da resposta e das evidências salvas."""
     evidencias = pd.DataFrame(r["evidencias"])
     v2 = classificar_trechos(r["resposta"], evidencias, r["pergunta"])
     return {"v1": verificar_trechos(r["resposta"], evidencias), **v2,
-            "sinalizados": v2["trechos_nao_encontrados"] + v2["registro_como_relato"]}
+            "sinalizados": v2["trechos_nao_encontrados"] + v2["registro_como_relato"],
+            "contagens": encontrar_contagens(r["resposta"])}
 
 
 def metricas_configuracao(config: str) -> list[dict]:
@@ -76,6 +79,7 @@ def metricas_configuracao(config: str) -> list[dict]:
             "registro_como_relato_v2": sum(len(v["registro_como_relato"]) for v in vs),
             "trechos_da_pergunta_v2": sum(len(v["trechos_da_pergunta"]) for v in vs),
             "respostas_com_termos_freq": sum(bool(r["termos_frequencia"]) for r in rs),
+            "respostas_com_contagem": sum(bool(v["contagens"]) for v in vs),
             "tokens_saida_medio": sum(r["tokens_saida"] or 0 for r in rs) / len(rs),
             "segundos_mediana": pd.Series([r["segundos"] for r in rs]).median(),
         }

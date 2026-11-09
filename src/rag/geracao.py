@@ -4,12 +4,16 @@ O LLM recebe só as evidências recuperadas, numeradas [R1], [R2]..., o recorte 
 (filtros e tamanho) e regras que o obrigam a: usar apenas esse contexto, citar cada ponto,
 não inventar frequências nem causas, separar relato do cliente de registro do sistema e
 recusar quando as evidências não bastam. Depois, o código confere automaticamente:
-citações inexistentes, trechos entre aspas, termos de frequência proibidos e se houve recusa.
+citações inexistentes, trechos entre aspas, termos de frequência proibidos, contagens e se
+houve recusa.
 
 Versões do prompt e do contexto:
 - v2 (Etapa 3): ajustes feitos após a comparação gpt-oss-120b x qwen3.8-27b.
 - v3 (Etapa 5): o contexto rotula "Registro do sistema" e "Texto do cliente" e o prompt restringe
   as aspas ao texto do cliente, sem costurar frases (erro dominante encontrado na Etapa 4).
+- v4 (Etapa 5): igual ao v3, mas proíbe contar avaliações ou clientes da amostra recuperada
+  ("8 das avaliações"): com a busca melhor, as contagens cresceram, ficaram inverificáveis e,
+  mesmo quando certas, eram frequência disfarçada (a busca escolhe as avaliações pelo assunto).
 
 Verificador de trechos:
 - v1 (verificar_trechos, Etapa 3): mantido sem mudanças, para comparação.
@@ -51,6 +55,16 @@ TERMOS_FREQUENCIA = re.compile(
     flags=re.IGNORECASE,
 )
 
+# Contagens de avaliações ou clientes ("8 das avaliações", "três clientes") e porcentagens,
+# proibidas no prompt v4: na amostra recuperada, contar é frequência disfarçada
+PADRAO_CONTAGEM = re.compile(
+    r"\b(?:\d+|dois|duas|três|tres|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|"
+    r"quatorze|catorze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte)\s+"
+    r"(?:(?:das|dos|de)\s+)?(?:\d+\s+)?(?:avalia\w*|clientes|relatos|compradores)\b"
+    r"|\b\d+(?:[.,]\d+)?\s*%",
+    flags=re.IGNORECASE,
+)
+
 # Trecho entre aspas (retas ou curvas), opcionalmente seguido de uma citação [R#]
 PADRAO_TRECHO = re.compile(r'[“"]([^”"]{3,}?)[”"]\s*(\[[^\]]+\])?')
 
@@ -68,6 +82,21 @@ REGRA_3 = {
    (até 12 palavras), copiado como está, sem juntar pedaços de frases diferentes.
    Use aspas SOMENTE para trechos do texto do cliente.""",
 }
+REGRA_3["v4"] = REGRA_3["v3"]
+
+REGRA_4 = {
+    "v2": """4. Frequência: você vê apenas uma amostra de avaliações escolhidas por semelhança com a
+   pergunta, não a base inteira. NÃO use "a maioria", "principalmente", "frequentemente",
+   "recorrente", "sistêmico" nem porcentagens. Prefira "N das avaliações recuperadas"
+   (contando as que você cita) ou o campo "aparece Nx" do contexto.""",
+    "v4": """4. Frequência e contagens: você vê apenas uma amostra de avaliações escolhidas por
+   semelhança com a pergunta, não a base inteira; por isso, contar avaliações dessa amostra não
+   mede nada. NÃO conte avaliações nem clientes ("8 das avaliações", "três clientes"), NÃO use
+   porcentagens e NÃO use "a maioria", "principalmente", "frequentemente", "recorrente" nem
+   "sistêmico". Descreva o que os clientes relatam e cite as avaliações. A única quantidade
+   permitida é o campo "aparece Nx" do contexto, que conta textos idênticos no recorte.""",
+}
+REGRA_4["v3"] = REGRA_4["v2"]
 
 REGRA_6 = {
     "v2": """6. Relato x registro: o texto entre aspas no contexto é o RELATO do cliente; os campos do
@@ -80,6 +109,7 @@ REGRA_6 = {
    registro ("segundo o registro, o pedido atrasou 6 dias [R2]"). Se relato e registro
    divergirem, mostre os dois sem corrigir o cliente.""",
 }
+REGRA_6["v4"] = REGRA_6["v3"]
 
 
 def _montar_prompt(versao: str) -> str:
@@ -92,10 +122,7 @@ Regras obrigatórias:
    no formato [R1] ou [R2, R5]. Não repita a mesma ideia em pontos diferentes.
    Cite apenas referências que existem no contexto.
 {REGRA_3[versao]}
-4. Frequência: você vê apenas uma amostra de avaliações escolhidas por semelhança com a
-   pergunta, não a base inteira. NÃO use "a maioria", "principalmente", "frequentemente",
-   "recorrente", "sistêmico" nem porcentagens. Prefira "N das avaliações recuperadas"
-   (contando as que você cita) ou o campo "aparece Nx" do contexto.
+{REGRA_4[versao]}
 5. Causas: só mencione a causa de um problema se a própria avaliação citada mencionar essa
    causa, e atribua ao cliente ("os clientes atribuem a quebra à embalagem [R3]").
    Nunca deduza causas por conta própria.
@@ -130,7 +157,7 @@ FORMATO DE RECUSA (use somente este, sem as outras seções):
 compra (produto, entrega, atendimento, loja)."""
 
 
-PROMPTS = {versao: _montar_prompt(versao) for versao in ("v2", "v3")}
+PROMPTS = {versao: _montar_prompt(versao) for versao in ("v2", "v3", "v4")}
 PROMPT_SISTEMA = PROMPTS["v2"]  # compatibilidade com o código das etapas anteriores
 
 NOMES_OPERADORES = {"$eq": "=", "$ne": "≠", "$gt": ">", "$gte": "≥",
@@ -164,12 +191,12 @@ def _registro(e: pd.Series) -> str:
 def formatar_contexto(evidencias: pd.DataFrame, versao: str = VERSAO_PADRAO) -> str:
     """Transforma as evidências em blocos numerados: registro do sistema + relato do cliente.
 
-    v2: cabeçalho + texto entre aspas. v3: os dois rotulados explicitamente.
+    v2: cabeçalho + texto entre aspas. v3 e v4: os dois rotulados explicitamente.
     """
     blocos = []
     for _, e in evidencias.iterrows():
         repeticoes = f" | aparece {e['repeticoes']}x" if e["repeticoes"] > 1 else ""
-        if versao == "v3":
+        if versao in ("v3", "v4"):
             blocos.append(f"[{e['ref']}] Registro do sistema: {_registro(e)}{repeticoes}\n"
                           f'Texto do cliente: "{e["texto"]}"')
         else:
@@ -275,6 +302,12 @@ def classificar_trechos(texto: str, evidencias: pd.DataFrame, pergunta: str = ""
     return resultado
 
 
+def encontrar_contagens(texto: str) -> list[str]:
+    """Contagens de avaliações/clientes e porcentagens na resposta, fora da seção Limitações."""
+    corpo = texto.split("## Limitações")[0]
+    return [m.group(0) for m in PADRAO_CONTAGEM.finditer(corpo)]
+
+
 def criar_cliente(provedor: str) -> OpenAI:
     base_url, var_chave = PROVEDORES[provedor]
     chave = os.getenv(var_chave) if var_chave else "ollama"
@@ -323,6 +356,7 @@ def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None =
         "citacoes_invalidas": sorted({c for c in citacoes if c not in validas}),
         **trechos,
         "termos_frequencia": sorted({t.lower() for t in TERMOS_FREQUENCIA.findall(texto)}),
+        "contagens": encontrar_contagens(texto),
         "tokens_entrada": resposta.usage.prompt_tokens if resposta.usage else None,
         "tokens_saida": resposta.usage.completion_tokens if resposta.usage else None,
         "segundos": round(duracao, 1),
