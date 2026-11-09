@@ -1,13 +1,14 @@
-"""Etapa 4 — Avalia a fidelidade das respostas salvas: o juiz confere cada afirmação contra as
+"""Etapas 4 e 5 — Avalia a fidelidade das respostas salvas: o juiz confere cada afirmação contra as
 avaliações que ela cita.
 
 Para cada resposta que NÃO foi recusa, o juiz recebe a pergunta, o recorte, o MESMO contexto que
-o redator recebeu e a resposta. Ele lista as afirmações factuais e dá um veredito a cada uma
-(sustentada, parcial ou não sustentada), além de avaliar a resposta como um todo. Os resultados
-são salvos assim que chegam; rodar de novo pula o que já foi avaliado.
+o redator recebeu (inclusive o mesmo formato, v2 ou v3) e a resposta. Ele lista as afirmações
+factuais e dá um veredito a cada uma (sustentada, parcial ou não sustentada), além de avaliar a
+resposta como um todo. Os resultados são salvos assim que chegam; rodar de novo pula o que já foi
+avaliado.
 
-Uso (na raiz do projeto):
-    python -m src.avaliacao.avaliar_fidelidade
+Uso (na raiz do projeto), com uma ou mais configurações:
+    python -m src.avaliacao.avaliar_fidelidade reescrita_rerank_k20_prompt_v2 reescrita_rerank_k20_prompt_v3
 """
 import json
 import sys
@@ -19,9 +20,8 @@ from src.avaliacao.juiz import Juiz
 from src.rag.geracao import descrever_filtros, formatar_contexto
 
 RAIZ = Path(__file__).resolve().parents[2]
-CONFIG = "densa_k20_prompt_v2"
-ARQ_RESPOSTAS = RAIZ / "resultados" / "respostas" / f"{CONFIG}.jsonl"
-SAIDA = RAIZ / "resultados" / "fidelidade" / f"{CONFIG}.jsonl"
+PASTA_RESPOSTAS = RAIZ / "resultados" / "respostas"
+PASTA_FIDELIDADE = RAIZ / "resultados" / "fidelidade"
 VEREDITOS = {"sustentada", "parcial", "nao_sustentada"}
 
 PROMPT_FIDELIDADE = """Você é um auditor de fidelidade de respostas geradas por um sistema que
@@ -64,7 +64,7 @@ def ler_jsonl(arquivo: Path) -> list[dict]:
 
 
 def montar_mensagem(r: dict) -> str:
-    contexto = formatar_contexto(pd.DataFrame(r["evidencias"]))
+    contexto = formatar_contexto(pd.DataFrame(r["evidencias"]), r.get("versao_prompt", "v2"))
     return (f"PERGUNTA: {r['pergunta']}\n"
             f"RECORTE: {descrever_filtros(r.get('filtros'))} "
             f"({r['documentos_no_filtro']:,} avaliações com texto)\n\n"
@@ -93,80 +93,81 @@ def normalizar(avaliacao: dict) -> dict:
             "declara_limitacao_de_evidencia": bool(avaliacao.get("declara_limitacao_de_evidencia", False))}
 
 
-def imprimir_resumo() -> None:
-    t = pd.DataFrame([r for r in ler_jsonl(SAIDA) if "erro" not in r]).drop_duplicates(
-        ["id", "modelo"], keep="last")
+def imprimir_resumo(config: str) -> None:
+    t = pd.DataFrame([r for r in ler_jsonl(PASTA_FIDELIDADE / f"{config}.jsonl")
+                      if "erro" not in r]).drop_duplicates(["id", "modelo"], keep="last")
+    if t.empty:
+        print(f"\n{config}: nenhuma auditoria salva.")
+        return
     for v in VEREDITOS:
         t[v] = t["afirmacoes"].apply(lambda afs, v=v: sum(a["veredito"] == v for a in afs))
     t["total"] = t["afirmacoes"].apply(len)
-
     resumo = t.groupby("modelo").agg(
         respostas=("id", "size"), afirmacoes=("total", "sum"),
         sustentadas=("sustentada", "sum"), parciais=("parcial", "sum"),
         nao_sustentadas=("nao_sustentada", "sum"),
-        respostas_com_nao_sustentada=("nao_sustentada", lambda s: (s > 0).sum()),
         interpretacao_com_fatos_novos=("fatos_novos_na_interpretacao", "sum"),
         responde_a_pergunta_media=("responde_a_pergunta", "mean"),
     )
     resumo["fidelidade_%"] = 100 * resumo["sustentadas"] / resumo["afirmacoes"]
-    resumo["parciais_%"] = 100 * resumo["parciais"] / resumo["afirmacoes"]
-    resumo["nao_sustentadas_%"] = 100 * resumo["nao_sustentadas"] / resumo["afirmacoes"]
-    print("\nRESUMO DA FIDELIDADE POR MODELO:")
+    print(f"\nRESUMO DA FIDELIDADE — {config}:")
     print(resumo.round(2).T.to_string())
 
-    print("\nResponde à pergunta (média de 1 a 5) — agregadas x não agregadas:")
-    print(t.pivot_table(index="agregada", columns="modelo", values="responde_a_pergunta",
-                        aggfunc="mean").round(2).to_string())
 
-    p31 = t[t["id"] == "P31"][["modelo", "declara_limitacao_de_evidencia"]]
-    print("\nP31 (evidência escassa) — declarou a limitação?")
-    print(p31.to_string(index=False))
+def auditar(config: str, juiz: Juiz | None) -> Juiz | None:
+    respostas = [r for r in ler_jsonl(PASTA_RESPOSTAS / f"{config}.jsonl") if "erro" not in r]
+    unicas = {(r["id"], r["modelo"]): r for r in respostas}  # fica a última de cada par
+    a_avaliar = [r for r in unicas.values() if not r["recusou"]]
+    saida_arquivo = PASTA_FIDELIDADE / f"{config}.jsonl"
+    feitos = {(r["id"], r["modelo"]) for r in ler_jsonl(saida_arquivo) if "erro" not in r}
+    pendentes = [r for r in a_avaliar if (r["id"], r["modelo"]) not in feitos]
+    print(f"\n{config}: {len(a_avaliar)} respostas a auditar | {len(feitos)} já auditadas | "
+          f"{len(pendentes)} pendentes", flush=True)
+    if not pendentes:
+        return juiz
+
+    juiz = juiz or Juiz()
+    print(f"Juiz: {juiz.modelo}", flush=True)
+    saida_arquivo.parent.mkdir(parents=True, exist_ok=True)
+    with saida_arquivo.open("a", encoding="utf-8") as saida:
+        for r in pendentes:
+            registro = {"id": r["id"], "modelo": r["modelo"], "tipo": r["tipo"],
+                        "esperado": r["esperado"], "agregada": r["agregada"],
+                        "config": config, "juiz": juiz.modelo}
+            try:
+                avaliacao = None
+                for tentativa in range(2):  # uma nova tentativa se o formato vier inválido
+                    try:
+                        avaliacao = normalizar(juiz.avaliar_json(PROMPT_FIDELIDADE,
+                                                                 montar_mensagem(r)))
+                        break
+                    except ValueError as erro:
+                        print(f"   formato inválido (tentativa {tentativa + 1}): {erro}",
+                              flush=True)
+                if avaliacao is None:
+                    raise ValueError("formato inválido após 2 tentativas")
+                registro.update(avaliacao)
+                vs = [a["veredito"] for a in avaliacao["afirmacoes"]]
+                status = (f"afirmações {len(vs)} | sustentadas {vs.count('sustentada')} | "
+                          f"parciais {vs.count('parcial')} | "
+                          f"não sustentadas {vs.count('nao_sustentada')}")
+            except Exception as erro:  # registra e segue; a próxima execução refaz
+                registro["erro"] = str(erro)
+                status = f"ERRO: {erro}"
+            saida.write(json.dumps(registro, ensure_ascii=False) + "\n")
+            saida.flush()
+            print(f"[{r['id']}] {r['modelo'].split('/')[-1]:14s} {status}", flush=True)
+    return juiz
 
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    respostas = [r for r in ler_jsonl(ARQ_RESPOSTAS) if "erro" not in r]
-    unicas = {(r["id"], r["modelo"]): r for r in respostas}  # fica a última de cada par
-    a_avaliar = [r for r in unicas.values() if not r["recusou"]]
-    feitos = {(r["id"], r["modelo"]) for r in ler_jsonl(SAIDA) if "erro" not in r}
-    pendentes = [r for r in a_avaliar if (r["id"], r["modelo"]) not in feitos]
-    print(f"{len(a_avaliar)} respostas a auditar | {len(feitos)} já auditadas | "
-          f"{len(pendentes)} pendentes", flush=True)
-
-    if pendentes:
-        juiz = Juiz()
-        print(f"Juiz: {juiz.modelo}", flush=True)
-        SAIDA.parent.mkdir(parents=True, exist_ok=True)
-        with SAIDA.open("a", encoding="utf-8") as saida:
-            for r in pendentes:
-                registro = {"id": r["id"], "modelo": r["modelo"], "tipo": r["tipo"],
-                            "esperado": r["esperado"], "agregada": r["agregada"],
-                            "config": CONFIG, "juiz": juiz.modelo}
-                try:
-                    avaliacao = None
-                    for tentativa in range(2):  # uma nova tentativa se o formato vier inválido
-                        try:
-                            avaliacao = normalizar(juiz.avaliar_json(PROMPT_FIDELIDADE,
-                                                                     montar_mensagem(r)))
-                            break
-                        except ValueError as erro:
-                            print(f"   formato inválido (tentativa {tentativa + 1}): {erro}",
-                                  flush=True)
-                    if avaliacao is None:
-                        raise ValueError("formato inválido após 2 tentativas")
-                    registro.update(avaliacao)
-                    vs = [a["veredito"] for a in avaliacao["afirmacoes"]]
-                    status = (f"afirmações {len(vs)} | sustentadas {vs.count('sustentada')} | "
-                              f"parciais {vs.count('parcial')} | "
-                              f"não sustentadas {vs.count('nao_sustentada')}")
-                except Exception as erro:  # registra e segue; a próxima execução refaz
-                    registro["erro"] = str(erro)
-                    status = f"ERRO: {erro}"
-                saida.write(json.dumps(registro, ensure_ascii=False) + "\n")
-                saida.flush()
-                print(f"[{r['id']}] {r['modelo'].split('/')[-1]:14s} {status}", flush=True)
-
-    imprimir_resumo()
+    configs = sys.argv[1:] or ["densa_k20_prompt_v2"]
+    juiz = None
+    for config in configs:
+        juiz = auditar(config, juiz)
+    for config in configs:
+        imprimir_resumo(config)
 
 
 if __name__ == "__main__":

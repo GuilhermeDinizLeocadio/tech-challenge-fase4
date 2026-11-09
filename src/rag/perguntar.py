@@ -1,9 +1,12 @@
-"""Etapa 3 — Pergunta ao sistema pelo terminal: resposta + evidências citadas + verificações.
+"""Etapas 3 e 5 — Pergunta ao sistema pelo terminal: resposta + evidências citadas + verificações.
+
+Fluxo padrão (Etapa 5): reescrita da pergunta → busca densa → reranker → resposta.
 
 Exemplos (na raiz do projeto):
     python -m src.rag.perguntar "O que os clientes relatam sobre atrasos na entrega?"
     python -m src.rag.perguntar "Quais problemas aparecem?" --categoria "cama mesa banho" --nota-max 2
     python -m src.rag.perguntar "O que os clientes elogiam?" --uf RJ --de 20180101 --ate 20180630
+    python -m src.rag.perguntar "Pergunta" --sem-reescrita --sem-reranker   (linha de base)
 
 O modelo padrão é o LLM_MODELO do .env; use --modelo para trocar.
 """
@@ -11,8 +14,9 @@ import argparse
 import sys
 import textwrap
 
-from src.rag.geracao import gerar_resposta
-from src.rag.recuperacao import Buscador
+from src.rag.geracao import PROMPTS, VERSAO_PADRAO
+from src.rag.pipeline import responder
+from src.rag.recuperacao import MODOS, Buscador
 
 SITUACOES_ENTREGA = ["no prazo", "atrasado", "não entregue"]
 
@@ -60,8 +64,11 @@ def ler_argumentos() -> argparse.Namespace:
     p.add_argument("--ate", type=int, help="data da compra até (AAAAMMDD)")
     p.add_argument("--k", type=int, default=20, help="quantas avaliações enviar ao LLM (padrão 20)")
     p.add_argument("--modelo", help="modelo do LLM (padrão: LLM_MODELO do .env)")
-    p.add_argument("--modo", choices=["densa", "hibrida"], default="densa",
-                   help="tipo de busca (padrão: densa)")
+    p.add_argument("--modo", choices=MODOS, default="densa", help="tipo de busca (padrão: densa)")
+    p.add_argument("--sem-reescrita", action="store_true", help="não reescrever a pergunta")
+    p.add_argument("--sem-reranker", action="store_true", help="não reordenar com o reranker")
+    p.add_argument("--prompt", choices=sorted(PROMPTS), default=VERSAO_PADRAO,
+                   help=f"versão do prompt (padrão: {VERSAO_PADRAO})")
     return p.parse_args()
 
 
@@ -72,15 +79,19 @@ def main() -> None:
 
     print("Carregando modelo e índices...", flush=True)
     buscador = Buscador()
-    evidencias = buscador.buscar(args.pergunta, filtros=filtros, k_final=args.k, modo=args.modo)
-    if evidencias.empty:
+    saida = responder(buscador, args.pergunta, filtros=filtros, k=args.k,
+                      reescrever=not args.sem_reescrita, reranquear=not args.sem_reranker,
+                      modo=args.modo, modelo=args.modelo, versao_prompt=args.prompt)
+    evidencias, r = saida["evidencias"], saida["resultado"]
+    if r is None:
         print("\nNenhuma avaliação com texto encontrada neste recorte. Tente filtros mais amplos.")
         return
 
-    r = gerar_resposta(args.pergunta, evidencias, modelo=args.modelo)
-
     linha = "=" * 80
-    print(f"\n{linha}\nPERGUNTA: {args.pergunta}\n{linha}\n\n{r['resposta']}\n")
+    print(f"\n{linha}\nPERGUNTA: {args.pergunta}")
+    if saida["reescrita"]:
+        print(textwrap.fill(f"REESCRITA: {saida['reescrita']}", 80, subsequent_indent="  "))
+    print(f"{linha}\n\n{r['resposta']}\n")
 
     print(f"{linha}\nEVIDÊNCIAS CITADAS\n{linha}")
     validas = [c for c in r["citacoes"] if c in set(evidencias["ref"])]
@@ -88,18 +99,22 @@ def main() -> None:
         print("(nenhuma)")
     for ref, e in evidencias.set_index("ref").loc[validas].iterrows():
         data = str(e["data_compra"])
+        nota_rerank = f" | reranker {e['score_rerank']:.3f}" if "score_rerank" in e else ""
         print(f"[{ref}] review_id {e['review_id']} | nota {e['nota']} | "
-              f"{e['categoria_principal']} | compra {data[:4]}-{data[4:6]} | {e['uf']}")
+              f"{e['categoria_principal']} | compra {data[:4]}-{data[4:6]} | {e['uf']}{nota_rerank}")
         print(textwrap.indent(textwrap.fill(e["texto"], 74), "      "))
 
     print(f"\n{linha}\nVERIFICAÇÕES AUTOMÁTICAS\n{linha}")
-    print(f"  modelo: {r['modelo']} | {r['segundos']} s | tokens entrada/saída: "
-          f"{r['tokens_entrada']}/{r['tokens_saida']}")
+    print(f"  modelo: {r['modelo']} | prompt {r['versao_prompt']} | {r['segundos']} s | "
+          f"tokens entrada/saída: {r['tokens_entrada']}/{r['tokens_saida']}")
+    print(f"  busca: {args.modo}{'' if args.sem_reescrita else ' + reescrita'}"
+          f"{'' if args.sem_reranker else ' + reranker'}")
     print(f"  recorte: {evidencias.attrs['documentos_no_filtro']:,} avaliações com texto | "
           f"enviadas ao LLM: {len(evidencias)}")
     print(f"  recusou: {'sim' if r['recusou'] else 'não'}")
     print(f"  citações inválidas: {', '.join(r['citacoes_invalidas']) or 'nenhuma'}")
     print(f"  trechos não encontrados: {' | '.join(r['trechos_nao_encontrados']) or 'nenhum'}")
+    print(f"  registro citado como relato: {' | '.join(r['registro_como_relato']) or 'nenhum'}")
     print(f"  termos de frequência: {', '.join(r['termos_frequencia']) or 'nenhum'}")
 
 
