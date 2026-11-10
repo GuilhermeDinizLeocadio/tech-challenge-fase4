@@ -1,0 +1,21 @@
+review_id,nota,situacao_entrega,tema,similaridade,grupo,macrotema,texto,correto
+0f7fb8922bbddb9e5612e7240cc8d44e,4,no prazo,E08,0.9516551,elogio,ME05,Obrigado,True
+9e74017e094cb80abad0818e2d1ec046,5,no prazo,E06,0.9586655,elogio,ME01,"Super recomendo. Chegou certinho e bem embalado, e teve um bom preço, compraria novamente na loja.",False
+0302ac24139f464e1306fa2a16baa454,5,no prazo,E04,0.9597721,elogio,ME03,"Ótimo. Muito Bom, Produto, entrega",True
+c204a642e10f5e14b3455059600aa8e4,5,no prazo,E02,0.9890518,elogio,ME02,Ótimo. -,False
+5a6cb00d4ca458c71ec9063cb7bb10f2,5,no prazo,E06,0.9594784,elogio,ME01,"Como sempre as lojas lannister surpreende tanto no atendimento quanto no prazo de entrega, entregou meu produto antes da data prevista. Super recomendo!",True
+91cfd9a8f46af8b4f4bad6b5a4241ae0,5,no prazo,E09,0.9310193,elogio,ME05,"Recebi o produto dentro do prazo,veio embalado e não tinha danificados. Porem, a loja targaryen não atualizava o status do pedido nem no App das lojas lannister e nem no site dos correios.",True
+409e3e52d8002176e467b3cd5e7f8177,5,no prazo,E01,0.95861095,elogio,ME01,"Chegou perfeita, super recomendo",False
+d6157f6f52e139a99e5cf2d36d934a32,5,no prazo,E08,0.9546974,elogio,ME05,Bom. Gostei,True
+f43a40e3aeea1ea9f281a59766856812,4,no prazo,E10,0.9611407,elogio,ME01,"entrega muito no prazo, produto muito bom",True
+f0b6ede24d7073851a57c4af0aa6a588,5,no prazo,E02,0.9767233,elogio,ME02,Excelente,False
+57bd330dfa0790001e101d067647c66c,1,atrasado,P10,0.94634956,problema,MP02,Avaliar o quê se ainda não recebi o produto?,True
+904d4e98a37d1291ae75b76c7a67739c,1,no prazo,P14,0.9476004,problema,MP03,Produto errado. Estou arrependido.,True
+3078189c4859c91413f9ac90deae7d2a,1,no prazo,P04,0.92645615,problema,MP03,"como uma empresa que se preste a fornecer uma mercadoria de marca internacional, de alto valor agregado e não se dão ao mínimo do trabalho de verificar se o mesmo esta funcionando. respondam a pergunt",True
+6efce984242ca6456d74750810733a03,1,não entregue,P08,0.9313544,problema,MP02,Nao recebi,True
+c52b5ce3085cc8a8489614baad55296e,1,no prazo,P20,0.9772185,problema,MP02,o produto não foi entregue,True
+bda669d22b08c137982c8028a4c6bcc2,3,no prazo,P06,0.9277326,problema,MP06,"O produto foi entregue, porém, com o prazo de validade para vencimento em dois dias após a entrega. Logo, não conseguiria utilizar totalmente o que comprei. Estou aguardando o estorno combinado.",False
+7fb985b85b91d0b305fecc3531c9b371,1,no prazo,P19,0.9490291,problema,MP04,Só recebi um item do pedido,True
+3479b109d365da65ca7f35045bc96868,2,no prazo,P04,0.92846847,problema,MP03,PRODUTO FALSO. COMPREI UM CARTAO MAS NAO FUNCIONOU E DEU ERRO E ATRAVES DE APLICATIVO ACUSOU SER FALSO,True
+da019fba5d8be9427b00678f9cc80f51,2,não entregue,P06,0.9483524,problema,MP06,recomendaria só que ate o momento estou insatisfeita com a demora na entrega,True
+ae8e2c1b56cc33be3a56a78f1c657dc6,2,atrasado,P03,0.9339051,problema,MP04,Comprei outros dois produtos e chegaram. Agora o Mobile até hj nada.,True

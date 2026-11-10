@@ -11,3 +11,4 @@ bm25s==0.3.13
 streamlit==1.65.0
 ipywidgets==8.1.9
 PyStemmer==3.1.0
+scikit-learn==1.9.1

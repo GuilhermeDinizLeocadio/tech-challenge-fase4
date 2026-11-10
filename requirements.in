@@ -14,3 +14,4 @@ bm25s
 streamlit
 ipywidgets
 PyStemmer
+scikit-learn
