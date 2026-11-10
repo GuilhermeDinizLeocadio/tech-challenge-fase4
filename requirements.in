@@ -13,3 +13,4 @@ chromadb
 bm25s
 streamlit
 ipywidgets
+PyStemmer

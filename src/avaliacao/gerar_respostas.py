@@ -1,42 +1,59 @@
-"""Etapa 4 — Gera as respostas dos redatores para todas as perguntas de teste e salva em arquivo.
+"""Etapas 4 e 5 — Gera as respostas dos redatores para as perguntas de teste e salva em arquivo.
 
-Para cada pergunta, a busca é feita UMA vez e as mesmas evidências vão para todos os modelos
-(comparação justa). As chamadas alternam entre os modelos e respeitam um intervalo mínimo por
-modelo, para não estourar o limite de tokens por minuto da camada gratuita do Groq.
-Cada resposta é salva assim que chega, junto com as evidências usadas; rodar de novo pula o que
-já foi gerado e refaz o que terminou em erro.
+Cada configuração define a busca (de src/avaliacao/configuracoes.py), a versão do prompt e os
+modelos. Para cada pergunta, a busca é feita UMA vez por tipo de busca, e as mesmas evidências vão
+para todos os modelos e versões de prompt (comparação justa). As chamadas respeitam um intervalo
+mínimo por modelo (limite de tokens por minuto da camada gratuita do Groq). Cada resposta é salva
+assim que chega, junto com as evidências usadas; rodar de novo pula o que já foi gerado.
 
-Uso (na raiz do projeto):
-    python -m src.avaliacao.gerar_respostas
+Uso (na raiz do projeto), com uma ou mais configurações:
+    python -m src.avaliacao.gerar_respostas reescrita_rerank_k20_prompt_v4
 """
 import json
 import sys
 import time
+from contextlib import ExitStack
 from pathlib import Path
 
 import pandas as pd
 
+from src.avaliacao.configuracoes import executar
 from src.avaliacao.validar_perguntas import carregar_perguntas
 from src.rag.geracao import criar_cliente, gerar_resposta
 from src.rag.recuperacao import Buscador
 
 RAIZ = Path(__file__).resolve().parents[2]
 PASTA = RAIZ / "resultados" / "respostas"
-CONFIG = "densa_k20_prompt_v2"  # identifica esta configuração nas comparações futuras
-MODELOS = ["qwen/qwen3.8-27b", "openai/gpt-oss-120b"]
 K = 20
-INTERVALO_POR_MODELO = 30  # segundos entre duas chamadas ao mesmo modelo
+INTERVALO_POR_MODELO = 35  # segundos entre duas chamadas ao mesmo modelo (25 s causou esperas)
+QWEN, GPT_OSS = "qwen/qwen3.8-27b", "openai/gpt-oss-120b"
+
+CONFIGS = {
+    # Linha de base (Etapa 4)
+    "densa_k20_prompt_v2": {"busca": "densa", "versao_prompt": "v2", "modelos": [QWEN, GPT_OSS]},
+    # Etapa 5: busca nova com o prompt antigo (isola o efeito da busca)...
+    "reescrita_rerank_k20_prompt_v2": {"busca": "densa_reescrita_rerank", "versao_prompt": "v2",
+                                       "modelos": [QWEN]},
+    # ...com o prompt v3 (registro e relato rotulados; isola o efeito do prompt)...
+    "reescrita_rerank_k20_prompt_v3": {"busca": "densa_reescrita_rerank", "versao_prompt": "v3",
+                                       "modelos": [QWEN]},
+    # ...e com o prompt v4 (sem contagens dentro da amostra)
+    "reescrita_rerank_k20_prompt_v4": {"busca": "densa_reescrita_rerank", "versao_prompt": "v4",
+                                       "modelos": [QWEN]},
+}
+
 COLUNAS_EVIDENCIA = ["ref", "review_id", "chave_texto", "texto", "nota", "categoria_principal",
-                     "situacao_entrega", "dias_atraso", "data_compra", "uf", "repeticoes"]
-CAMPOS_RESULTADO = ["resposta", "recusou", "citacoes", "citacoes_invalidas",
-                    "trechos_nao_encontrados", "termos_frequencia", "tokens_entrada",
-                    "tokens_saida", "segundos"]
+                     "situacao_entrega", "dias_atraso", "data_compra", "uf", "repeticoes",
+                     "score_rerank"]
+CAMPOS_RESULTADO = ["versao_prompt", "resposta", "recusou", "citacoes", "citacoes_invalidas",
+                    "trechos_nao_encontrados", "registro_como_relato", "trechos_da_pergunta",
+                    "termos_frequencia", "contagens", "tokens_entrada", "tokens_saida", "segundos"]
 
 
-def conferir_modelos() -> None:
+def conferir_modelos(modelos: set[str]) -> None:
     """Erra cedo e com clareza se algum modelo não existir no Groq."""
     disponiveis = {m.id for m in criar_cliente("groq").models.list()}
-    faltando = [m for m in MODELOS if m not in disponiveis]
+    faltando = sorted(modelos - disponiveis)
     if faltando:
         raise RuntimeError(f"Modelos inexistentes no Groq: {faltando}")
 
@@ -53,91 +70,107 @@ def comportamento_correto(esperado: str, recusou: bool) -> bool:
     return recusou if esperado == "recusar" else not recusou
 
 
-def imprimir_resumo(arquivo: Path) -> None:
-    registros = ler_registros(arquivo)
+def imprimir_resumo(config: str) -> None:
+    registros = ler_registros(PASTA / f"{config}.jsonl")
     erros = sum("erro" in r for r in registros)
     t = (pd.DataFrame([r for r in registros if "erro" not in r])
            .drop_duplicates(["id", "modelo"], keep="last"))
-    t["n_invalidas"] = t["citacoes_invalidas"].apply(len)
-    t["n_trechos"] = t["trechos_nao_encontrados"].apply(len)
-    t["com_termos"] = t["termos_frequencia"].apply(len) > 0
+    if t.empty:
+        print(f"\n{config}: nenhuma resposta salva.")
+        return
+    contar = lambda coluna: t.get(coluna, pd.Series([[]] * len(t))).apply(
+        lambda v: len(v) if isinstance(v, list) else 0)
+    t["n_invalidas"] = contar("citacoes_invalidas")
+    t["n_trechos"] = contar("trechos_nao_encontrados")
+    t["n_registro"] = contar("registro_como_relato")
+    t["com_termos"] = contar("termos_frequencia") > 0
+    t["com_contagem"] = contar("contagens") > 0
 
     resumo = t.groupby("modelo").agg(
         respostas=("id", "size"),
         comportamento_correto=("comportamento_correto", "mean"),
         citacoes_invalidas=("n_invalidas", "sum"),
         trechos_nao_encontrados=("n_trechos", "sum"),
+        registro_como_relato=("n_registro", "sum"),
         respostas_com_termos_frequencia=("com_termos", "sum"),
+        respostas_com_contagem=("com_contagem", "sum"),
         tokens_saida_medio=("tokens_saida", "mean"),
         segundos_mediana=("segundos", "median"),
     )
-    print("\nRESUMO POR MODELO:")
+    print(f"\nRESUMO — {config}:")
     print(resumo.round(2).T.to_string())
-
-    print("\nComportamento correto por tipo de pergunta:")
-    print(t.pivot_table(index="tipo", columns="modelo", values="comportamento_correto",
-                        aggfunc="mean").round(2).to_string())
-
     errados = t[~t["comportamento_correto"]]
-    if not errados.empty:
-        print("\nPerguntas com comportamento errado:")
-        for _, r in errados.iterrows():
-            print(f"  [{r['id']}] {r['modelo'].split('/')[-1]:14s} esperado={r['esperado']:9s} "
-                  f"recusou={r['recusou']} | {r['pergunta'][:60]}")
+    for _, r in errados.iterrows():
+        print(f"  comportamento errado: [{r['id']}] {r['modelo'].split('/')[-1]} "
+              f"esperado={r['esperado']} recusou={r['recusou']} | {r['pergunta'][:60]}")
     if erros:
-        print(f"\n{erros} chamada(s) terminaram em erro; rode o mesmo comando para refazê-las.")
+        print(f"  {erros} chamada(s) terminaram em erro; rode o mesmo comando para refazê-las.")
 
 
 def main() -> None:
     sys.stdout.reconfigure(encoding="utf-8")
-    conferir_modelos()
+    configs = sys.argv[1:]
+    desconhecidas = [c for c in configs if c not in CONFIGS]
+    if not configs or desconhecidas:
+        print(f"Informe uma ou mais configurações entre: {', '.join(CONFIGS)}")
+        return
+    conferir_modelos({m for c in configs for m in CONFIGS[c]["modelos"]})
     perguntas = carregar_perguntas()
     PASTA.mkdir(parents=True, exist_ok=True)
-    arquivo = PASTA / f"{CONFIG}.jsonl"
 
-    feitos = {(r["id"], r["modelo"]) for r in ler_registros(arquivo) if "erro" not in r}
-    pendentes = [(p["id"], m) for p in perguntas for m in MODELOS if (p["id"], m) not in feitos]
-    print(f"Configuração {CONFIG}: {len(feitos)} respostas já salvas, {len(pendentes)} a gerar.",
-          flush=True)
+    feitos = {c: {(r["id"], r["modelo"]) for r in ler_registros(PASTA / f"{c}.jsonl")
+                  if "erro" not in r} for c in configs}
+    pendentes = sum(1 for c in configs for p in perguntas for m in CONFIGS[c]["modelos"]
+                    if (p["id"], m) not in feitos[c])
+    print(f"Configurações: {', '.join(configs)} | {pendentes} respostas a gerar.", flush=True)
 
     if pendentes:
         print("Carregando o buscador...", flush=True)
         buscador = Buscador()
-        ultima_chamada = {m: 0.0 for m in MODELOS}
-        with arquivo.open("a", encoding="utf-8") as saida:
+        ultima_chamada: dict[str, float] = {}
+        with ExitStack() as pilha:
+            saidas = {c: pilha.enter_context((PASTA / f"{c}.jsonl").open("a", encoding="utf-8"))
+                      for c in configs}
             for p in perguntas:
-                modelos_pendentes = [m for m in MODELOS if (p["id"], m) not in feitos]
-                if not modelos_pendentes:
-                    continue
-                # Uma busca por pergunta: as mesmas evidências para todos os modelos
-                evid = buscador.buscar(p["pergunta"], filtros=p.get("filtros"), k_final=K)
-                evidencias = json.loads(evid[COLUNAS_EVIDENCIA].to_json(orient="records",
-                                                                        force_ascii=False))
-                for modelo in modelos_pendentes:
-                    espera = INTERVALO_POR_MODELO - (time.monotonic() - ultima_chamada[modelo])
-                    if espera > 0:
-                        time.sleep(espera)
-                    ultima_chamada[modelo] = time.monotonic()
+                evidencias_por_busca: dict[str, pd.DataFrame] = {}
+                for c in configs:
+                    cfg = CONFIGS[c]
+                    for modelo in cfg["modelos"]:
+                        if (p["id"], modelo) in feitos[c]:
+                            continue
+                        if cfg["busca"] not in evidencias_por_busca:  # uma busca por tipo
+                            evidencias_por_busca[cfg["busca"]] = executar(buscador, p, cfg["busca"], K)
+                        evid = evidencias_por_busca[cfg["busca"]]
 
-                    registro = {"id": p["id"], "tipo": p["tipo"], "esperado": p["esperado"],
-                                "agregada": p.get("agregada", False), "pergunta": p["pergunta"],
-                                "filtros": p.get("filtros"), "config": CONFIG, "modelo": modelo,
-                                "documentos_no_filtro": int(evid.attrs.get("documentos_no_filtro", 0))}
-                    try:
-                        r = gerar_resposta(p["pergunta"], evid, modelo=modelo)
-                        registro.update({c: r[c] for c in CAMPOS_RESULTADO})
-                        registro["comportamento_correto"] = comportamento_correto(
-                            p["esperado"], r["recusou"])
-                        registro["evidencias"] = evidencias
-                        status = f"{r['segundos']} s | recusou={r['recusou']}"
-                    except Exception as erro:  # registra e segue; a próxima execução refaz
-                        registro["erro"] = str(erro)
-                        status = f"ERRO: {erro}"
-                    saida.write(json.dumps(registro, ensure_ascii=False) + "\n")
-                    saida.flush()
-                    print(f"[{p['id']}] {modelo.split('/')[-1]:14s} {status}", flush=True)
+                        espera = INTERVALO_POR_MODELO - (time.monotonic() - ultima_chamada.get(modelo, 0.0))
+                        if espera > 0:
+                            time.sleep(espera)
+                        ultima_chamada[modelo] = time.monotonic()
 
-    imprimir_resumo(arquivo)
+                        registro = {"id": p["id"], "tipo": p["tipo"], "esperado": p["esperado"],
+                                    "agregada": p.get("agregada", False), "pergunta": p["pergunta"],
+                                    "filtros": p.get("filtros"), "config": c, "modelo": modelo,
+                                    "busca": cfg["busca"], "consulta": evid.attrs.get("consulta"),
+                                    "documentos_no_filtro": int(evid.attrs.get("documentos_no_filtro", 0))}
+                        try:
+                            r = gerar_resposta(p["pergunta"], evid, modelo=modelo,
+                                               versao_prompt=cfg["versao_prompt"])
+                            registro.update({campo: r[campo] for campo in CAMPOS_RESULTADO})
+                            registro["comportamento_correto"] = comportamento_correto(
+                                p["esperado"], r["recusou"])
+                            colunas = [col for col in COLUNAS_EVIDENCIA if col in evid.columns]
+                            registro["evidencias"] = json.loads(
+                                evid[colunas].to_json(orient="records", force_ascii=False))
+                            status = f"{r['segundos']} s | recusou={r['recusou']}"
+                        except Exception as erro:  # registra e segue; a próxima execução refaz
+                            registro["erro"] = str(erro)
+                            status = f"ERRO: {erro}"
+                        saidas[c].write(json.dumps(registro, ensure_ascii=False) + "\n")
+                        saidas[c].flush()
+                        print(f"[{p['id']}] {c} | {modelo.split('/')[-1]} | {status}", flush=True)
+
+    for c in configs:
+        imprimir_resumo(c)
 
 
 if __name__ == "__main__":

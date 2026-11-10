@@ -1,13 +1,20 @@
-"""Etapa 3 — Recuperação: busca por sentido (Chroma) e, opcionalmente, por palavras (BM25).
+"""Recuperação: busca por sentido (Chroma), por palavras (BM25) e reranker (cross-encoder).
 
-Modos:
-- "densa"   (padrão): só busca por sentido. É a linha de base da Etapa 3.
-- "hibrida": sentido + BM25 fundidos por RRF (Reciprocal Rank Fusion), que combina POSIÇÕES em
-             vez de notas, porque cada busca tem uma escala própria. Será corrigida e medida na
-             Etapa 5 (o BM25 sem tratamento de plural piorou os resultados no teste inicial).
+Modos de busca:
+- "densa"             (padrão): só busca por sentido. Linha de base da Etapa 3.
+- "hibrida"           sentido + BM25 fundidos por RRF (Reciprocal Rank Fusion), que combina
+                      POSIÇÕES em vez de notas, porque cada busca tem uma escala própria.
+- "hibrida_corrigida" (Etapa 5) igual à híbrida, mas o BM25 usa radicais das palavras
+                      ("quebrados" = "quebrado") e pesa metade na fusão.
 
-Em ambos os modos, textos idênticos são colapsados num só (com a contagem de repetições)
-para não ocupar o contexto com evidências duplicadas.
+Reranker (opcional, Etapa 5): um cross-encoder lê a pergunta JUNTO com cada um dos 50 primeiros
+candidatos e dá uma nota de relevância; os candidatos são reordenados por essa nota antes da
+escolha dos K finais.
+
+Consulta (opcional, Etapa 5): texto usado na PRIMEIRA busca (densa e BM25), por exemplo a pergunta
+reescrita na linguagem dos clientes. O reranker sempre julga pela pergunta original.
+
+Em todos os casos, textos idênticos são colapsados num só (com a contagem de repetições).
 
 Filtros usam uma linguagem única, traduzida para o Chroma e para o pandas (BM25):
     {"nota": {"$lte": 2}, "categoria_principal": "cama mesa banho"}
@@ -21,6 +28,8 @@ import bm25s
 import chromadb
 import numpy as np
 import pandas as pd
+import Stemmer
+from sentence_transformers import CrossEncoder
 
 from src.indexacao.embeddings import carregar_modelo, preparar_pergunta
 from src.ingestao.construir_corpus import gerar_chave_texto
@@ -29,10 +38,15 @@ RAIZ = Path(__file__).resolve().parents[2]
 INDICE = RAIZ / "indice"
 CORPUS = RAIZ / "data" / "processed" / "corpus.parquet"
 
-K_CANDIDATOS = 50  # quantos resultados cada busca traz antes da fusão
+K_CANDIDATOS = 50  # quantos resultados cada busca traz antes da fusão (e quantos o reranker lê)
 K_RRF = 60         # constante padrão do RRF (Cormack et al., 2009)
+PESO_BM25_CORRIGIDA = 0.5  # peso do BM25 na fusão da híbrida corrigida (definido antes de medir)
 PADRAO_TOKEN = re.compile(r"(?u)\b\w\w+\b")  # mesmo critério de "palavra" usado pelo bm25s
 
+MODELO_RERANKER = "BAAI/bge-reranker-v2-m3"
+LOTE_RERANKER = 16  # pares (pergunta, avaliação) processados por vez
+
+MODOS = ("densa", "hibrida", "hibrida_corrigida")
 COLUNAS_EVIDENCIA = ["texto", "nota", "categoria_principal", "situacao_entrega", "dias_atraso",
                      "data_compra", "uf", "empresas_citadas", "chave_texto"]
 
@@ -83,13 +97,36 @@ class Buscador:
         self.colecao = cliente.get_collection("avaliacoes")
         self.bm25 = bm25s.BM25.load(str(INDICE / "bm25"))
         ids_bm25 = pd.read_parquet(INDICE / "bm25_ids.parquet")["review_id"]
-        # Corpus na MESMA ordem do índice BM25 (o BM25 identifica documentos pela posição)
+        # Corpus na MESMA ordem dos índices BM25 (o BM25 identifica documentos pela posição)
         self.corpus = pd.read_parquet(CORPUS).set_index("review_id").loc[ids_bm25]
+        self.stemmer = Stemmer.Stemmer("portuguese")
+        self._bm25_radical = None  # carregados só no primeiro uso
+        self._reranker = None
 
-    def busca_densa(self, pergunta: str, filtros: dict | None = None,
+    @property
+    def bm25_radical(self) -> bm25s.BM25:
+        if self._bm25_radical is None:
+            self._bm25_radical = bm25s.BM25.load(str(INDICE / "bm25_radical"))
+        return self._bm25_radical
+
+    @property
+    def reranker(self) -> CrossEncoder:
+        if self._reranker is None:
+            modelo = CrossEncoder(MODELO_RERANKER, device="cpu")
+            getattr(modelo, "model", modelo).float()  # garante float32 na CPU
+            self._reranker = modelo
+        return self._reranker
+
+    def pontuar_reranker(self, pergunta: str, candidatos: pd.DataFrame) -> pd.Series:
+        """Nota do cross-encoder para cada par (pergunta, avaliação)."""
+        pares = [(pergunta, texto) for texto in candidatos["texto"]]
+        notas = self.reranker.predict(pares, batch_size=LOTE_RERANKER, show_progress_bar=False)
+        return pd.Series(np.asarray(notas, dtype=float), index=candidatos.index)
+
+    def busca_densa(self, consulta: str, filtros: dict | None = None,
                     k: int = K_CANDIDATOS) -> pd.DataFrame:
-        """Busca por SENTIDO no Chroma (pergunta com a instrução do e5-instruct)."""
-        vetor = self.modelo.encode([preparar_pergunta(pergunta)], normalize_embeddings=True)
+        """Busca por SENTIDO no Chroma (consulta com a instrução do e5-instruct)."""
+        vetor = self.modelo.encode([preparar_pergunta(consulta)], normalize_embeddings=True)
         res = self.colecao.query(query_embeddings=vetor, n_results=k,
                                  where=filtro_para_chroma(filtros), include=["distances"])
         ids = res["ids"][0]
@@ -99,18 +136,24 @@ class Buscador:
             "pos_densa": range(1, len(ids) + 1),
         })
 
-    def busca_bm25(self, pergunta: str, filtros: dict | None = None,
-                   k: int = K_CANDIDATOS) -> pd.DataFrame:
-        """Busca por PALAVRAS: a pergunta passa pela mesma padronização dos documentos."""
-        tokens = PADRAO_TOKEN.findall(gerar_chave_texto(pergunta))
-        vocabulario = getattr(self.bm25, "vocab_dict", None)
+    def busca_bm25(self, consulta: str, filtros: dict | None = None, k: int = K_CANDIDATOS,
+                   radical: bool = False) -> pd.DataFrame:
+        """Busca por PALAVRAS: a consulta passa pela mesma padronização dos documentos.
+
+        radical=True usa o índice com radicais (e extrai o radical das palavras da consulta).
+        """
+        indice = self.bm25_radical if radical else self.bm25
+        tokens = PADRAO_TOKEN.findall(gerar_chave_texto(consulta))
+        if radical:
+            tokens = self.stemmer.stemWords(tokens)
+        vocabulario = getattr(indice, "vocab_dict", None)
         if vocabulario is not None:  # ignora palavras que não existem em nenhuma avaliação
             tokens = [t for t in tokens if t in vocabulario]
         vazio = pd.DataFrame(columns=["review_id", "score_bm25", "pos_bm25"])
         if not tokens:
             return vazio
 
-        pontuacoes = self.bm25.get_scores(tokens)  # nota para TODOS os documentos
+        pontuacoes = indice.get_scores(tokens)  # nota para TODOS os documentos
         mascara = filtro_para_mascara(self.corpus, filtros).to_numpy()
         pontuacoes = np.where(mascara, pontuacoes, -np.inf)  # fora do filtro = nunca escolhido
         melhores = np.argsort(-pontuacoes)[:k]
@@ -122,28 +165,41 @@ class Buscador:
         })
 
     def buscar(self, pergunta: str, filtros: dict | None = None, k_final: int = 20,
-               modo: str = "densa") -> pd.DataFrame:
-        """Recupera evidências e colapsa textos idênticos.
+               modo: str = "densa", reranquear: bool = False,
+               consulta: str | None = None) -> pd.DataFrame:
+        """Recupera evidências, colapsa textos idênticos e, se pedido, reordena pelo reranker.
 
-        modo="densa"   -> só busca por sentido (padrão; linha de base da Etapa 3)
-        modo="hibrida" -> sentido + BM25 fundidos por RRF (a ser corrigida e medida na Etapa 5)
+        modo        "densa", "hibrida" ou "hibrida_corrigida"
+        reranquear  os 50 primeiros candidatos são reordenados pelo cross-encoder
+        consulta    texto da 1ª busca (padrão: a própria pergunta); o reranker usa a pergunta
         """
-        if modo not in ("densa", "hibrida"):
+        if modo not in MODOS:
             raise ValueError(f"modo inválido: {modo}")
-        densa = self.busca_densa(pergunta, filtros)
+        texto_busca = consulta or pergunta
+        densa = self.busca_densa(texto_busca, filtros)
+        peso_bm25 = 1.0
         if modo == "hibrida":
-            lexical = self.busca_bm25(pergunta, filtros)
+            lexical = self.busca_bm25(texto_busca, filtros)
+        elif modo == "hibrida_corrigida":
+            lexical = self.busca_bm25(texto_busca, filtros, radical=True)
+            peso_bm25 = PESO_BM25_CORRIGIDA
         else:
             lexical = pd.DataFrame(columns=["review_id", "score_bm25", "pos_bm25"])
 
         fundido = densa.merge(lexical, on="review_id", how="outer")
         fundido["rrf"] = ((1 / (K_RRF + fundido["pos_densa"])).fillna(0)
-                          + (1 / (K_RRF + fundido["pos_bm25"])).fillna(0))
+                          + peso_bm25 * (1 / (K_RRF + fundido["pos_bm25"])).fillna(0))
         fundido = (fundido.sort_values("rrf", ascending=False)
                           .join(self.corpus[COLUNAS_EVIDENCIA], on="review_id"))
 
         # Textos idênticos viram UMA evidência: fica a mais bem posicionada
         fundido = fundido.drop_duplicates("chave_texto", keep="first")
+
+        # Reranker: lê a PERGUNTA ORIGINAL + avaliação juntas nos 50 primeiros e reordena
+        if reranquear and not fundido.empty:
+            fundido = fundido.head(K_CANDIDATOS).copy()
+            fundido["score_rerank"] = self.pontuar_reranker(pergunta, fundido)
+            fundido = fundido.sort_values("score_rerank", ascending=False)
 
         # Quantas vezes cada texto aparece no universo filtrado ("aparece N vezes")
         universo = self.corpus[filtro_para_mascara(self.corpus, filtros)]
@@ -154,4 +210,5 @@ class Buscador:
         fundido.insert(0, "ref", [f"R{i + 1}" for i in range(len(fundido))])
         fundido.attrs["documentos_no_filtro"] = len(universo)  # volume de evidência disponível
         fundido.attrs["filtros"] = filtros or {}  # recorte usado, para a resposta declarar
+        fundido.attrs["consulta"] = texto_busca
         return fundido

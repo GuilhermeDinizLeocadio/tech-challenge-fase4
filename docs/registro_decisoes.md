@@ -591,3 +591,230 @@ frequência e recusa.
   validações com amostras pequenas (21 e 12 casos).
 - A tabela é gerada a partir de todas as configurações salvas: cada melhoria da Etapa 5 entra como
   uma nova coluna, medida com a mesma régua.
+
+
+  ## Etapa 5 — Melhorias medidas
+
+### Estratégia
+Melhorias na busca são medidas offline, com os rótulos de relevância da Etapa 4 (sem custo de API);
+só a melhor configuração passa pela geração de respostas e pelo juiz de fidelidade.
+
+### Reranker (`BAAI/bge-reranker-v2-m3`, cross-encoder local)
+- Lê a pergunta junto com cada um dos 50 primeiros candidatos (já sem textos repetidos) e reordena
+  pela nota de relevância. Atuar só nos 50 primeiros garante que todo candidato já tem rótulo.
+- Escolha: multilíngue e forte em português, local e sem chave, compatível com o
+  `sentence-transformers`. Critério definido antes de medir: até 10 s por pergunta.
+
+| Configuração | Precisão@20 | Hit@5 | MRR | Recall@20 | Tempo (mediana) |
+|---|---|---|---|---|---|
+| densa | 0,821 | 0,958 | 0,965 | 0,357 | 0,16 s |
+| híbrida ingênua | 0,702 | 1,000 | 0,958 | 0,310 | 0,14 s |
+| **densa + reranker** | **0,896** | **1,000** | **0,979** | **0,402** | 5,03 s |
+| híbrida + reranker | 0,865 | 1,000 | 0,958 | 0,392 | 4,47 s |
+
+- Maior ganho nas perguntas específicas (precisão 0,725 → 0,870): o embedding capta o assunto, o
+  reranker capta o detalhe da pergunta. P09 (quebrados) e P11 (itens faltando) foram a 1,00; a
+  P05 ("meta") passou a ter avaliação relevante entre as 5 primeiras.
+- **Não resolvida:** P13 ("atendimento ao tentar resolver um problema", 0,25 → 0,20). O reranker só
+  reordena os candidatos da primeira busca; se eles não contêm avaliações relevantes, não há o que
+  reordenar → reescrita da pergunta (parte 2).
+- **P15 ("Correios"):** 0,70 com densa + reranker, 0,90 com híbrida + reranker → termos exatos se
+  beneficiam do BM25 → híbrida corrigida (parte 2).
+
+### Recusa calibrada pelo reranker: descartada com base em dados
+- A nota do reranker na 1ª avaliação ficou entre 0,000 e 0,009 nas perguntas a recusar, mas
+  perguntas legítimas agregadas ou genéricas tiveram notas iguais ou menores (P06 "principais
+  reclamações" 0,002, a mesma de "entrega por drones"; P22 0,004; P01 0,005).
+- Motivo: o reranker mede se UMA avaliação responde à pergunta; perguntas sobre o conjunto não são
+  respondidas por nenhuma avaliação isolada.
+- Decisão: sem porteiro por limiar. O redator já recusa corretamente 100% das perguntas sem
+  evidência; um limiar recusaria perguntas do próprio enunciado. Além disso, com 31 perguntas,
+  qualquer limiar seria ajustado na própria prova.
+
+
+  ### Híbrida corrigida e reescrita da pergunta (parte 2)
+- **Híbrida corrigida:** BM25 com radicais (PyStemmer, português: "quebrado", "quebrados" e
+  "quebrou" → "quebr") e peso 0,5 na fusão (definido antes de medir).
+- **Reescrita da pergunta** (`src/rag/reescrita.py`): o LLM escreve 3 frases como clientes
+  escreveriam; a 1ª busca usa pergunta + frases, o reranker julga pela pergunta original.
+  Reescritas salvas em `resultados/reescritas.json` (avaliação reprodutível).
+  - **Prompt v1** (guardado em `reescritas_v1.json`), inspecionado antes de medir: invertia a
+    polaridade ("atraso" ganhava "chegou antes do previsto"), perdia termos da pergunta ("Correios",
+    "Lannister") e inventava clientes para perguntas fora do assunto ("previsão do tempo").
+  - **Prompt v2** (revisão única, por princípios gerais): manter a polaridade e os termos da
+    pergunta; `SEM_REESCRITA` quando a pergunta não trata de experiências de clientes (aplicado a
+    faturamento, celular, roteador e previsão do tempo).
+- Rotulagem incremental: só os pares novos foram ao juiz (240 rótulos, 2.462 no total).
+
+| Configuração (24 perguntas a responder) | Precisão@20 | Hit@5 | MRR | Recall@20* |
+|---|---|---|---|---|
+| densa | 0,821 | 0,958 | 0,965 | 0,305 |
+| híbrida ingênua | 0,702 | 1,000 | 0,958 | 0,266 |
+| híbrida corrigida | 0,827 | 0,958 | 0,917 | 0,308 |
+| densa + reranker | 0,896 | 1,000 | 0,979 | 0,339 |
+| híbrida + reranker | 0,865 | 1,000 | 0,958 | 0,329 |
+| híbrida corrigida + reranker | 0,896 | 1,000 | 0,979 | 0,339 |
+| **densa + reescrita + reranker** | **0,935** | **1,000** | **0,979** | **0,368** |
+
+\* Recall relativo ao pool de rotulagem, que cresceu nesta etapa: só comparável dentro da mesma
+rodada.
+
+- **Perguntas que falhavam** (densa → + reranker → + reescrita): P05 0,45 → 0,60 → 0,90;
+  P13 0,25 → 0,20 → 0,55; P14 0,60 → 0,80 → 1,00; P15 0,50 → 0,70 → 1,00.
+  A reescrita resolveu o que o reranker não alcançava: melhorou a 1ª busca (P13) e, mantendo o
+  termo "Correios", tornou a busca por palavras desnecessária (P15). P13 segue a mais difícil.
+- **Híbrida descartada, com explicação matemática:** com peso 0,5 e RRF k = 60, a 1ª colocada só
+  do BM25 vale 0,5/61 ≈ 0,0082, menos que a 50ª da densa (1/110 ≈ 0,0091). O BM25 nunca traz
+  candidata nova ao top-50, só reordena; com o reranker, o resultado é idêntico ao da densa.
+  Sem reranker, a correção funcionou (0,702 → 0,827), mas não supera a densa. Outros pesos não
+  foram testados para não ajustar o sistema à prova; o motivo da híbrida (P15) já foi resolvido.
+- **Custo da reescrita nas agregadas:** precisão 0,98 → 0,93 nas agregadas e 0,874 → 0,937 nas
+  demais. É o viés de confirmação previsto (a reescrita busca o que o LLM supõe); a decisão sobre
+  as agregadas fica para a Etapa 6 (camada de temas).
+- Recusas sem piora (iscas 5,9 → 6,0). Tempo: ~5,3 s por busca + uma chamada ao LLM para reescrever.
+- **Decisão: busca final = densa + reescrita + reranker.**
+
+
+### Verificador refinado (v2) e linha de base recalculada (parte 3a)
+- `classificar_trechos` separa os trechos entre aspas que não estão no relato em três categorias:
+  inexistentes, **registro citado como relato** (dados do cabeçalho entre aspas como fala do
+  cliente) e **termos da própria pergunta** (ex.: numa recusa). Inserções editoriais
+  [entre colchetes] são removidas antes de comparar. O verificador v1 foi mantido.
+- O relatório recalcula v1 e v2 a partir das respostas salvas: todas as configurações passam a ser
+  medidas com a mesma régua, sem nova chamada à API. O v1 recalculado bate com a Etapa 4 (31 e 5).
+
+| Linha de base (densa, prompt v2) | gpt-oss-120b | qwen3.8-27b |
+|---|---|---|
+| Trechos sinalizados (v1) | 31 | 5 |
+| Inexistentes (v2) | 19 | 1 |
+| Registro citado como relato (v2) | 12 | 1 |
+| Termos da pergunta (v2, falsos alarmes) | 0 | 2 |
+| Fidelidade ajustada com v1 → v2 | 89,6% → 89,6% | 94,0% → 94,7% |
+
+- Dos 5 sinalizados do Qwen, só 2 eram erros reais, de tipos diferentes.
+- A categoria "registro citado como relato" é um limite inferior: só é reconhecida quando o trecho
+  se parece com o texto do cabeçalho ("pedido não entregue" não casa com "entrega: não entregue").
+- A fidelidade ajustada passa a usar o v2: falsos alarmes deixam de rebaixar afirmações corretas,
+  e todo erro real continua contando.
+
+
+  ### Fluxo completo no código (parte 3b)
+- `src/rag/pipeline.py`: função única `responder` (reescrita → busca → reranker → resposta),
+  usada pela linha de comando e, na Etapa 8, pela interface, para que todos os caminhos sigam o
+  mesmo fluxo. Se a reescrita falhar (limite de uso, servidor fora do ar), a busca continua só
+  com a pergunta original: a resposta pode piorar um pouco, mas o sistema não para.
+- Linha de comando: o fluxo vencedor passou a ser o padrão, com `--sem-reescrita`,
+  `--sem-reranker` e `--prompt` para reproduzir as configurações anteriores.
+- Geração e auditoria passaram a receber as configurações no comando; o juiz recebe o contexto no
+  mesmo formato (v2, v3 ou v4) que o redator recebeu.
+- Teste na P13 (a pergunta mais difícil da prova): resposta equilibrada, separando problemas
+  resolvidos rapidamente de demora, falta de retorno e telefones sem atendimento, com trechos
+  literais e todas as verificações automáticas limpas.
+
+### Isolando o efeito da busca e do prompt (parte 3c)
+- Duas configurações novas, só com o Qwen e com as mesmas evidências por pergunta: busca nova +
+  prompt v2 (isola o efeito da busca) e busca nova + prompt v3 (isola o efeito do prompt).
+
+| Medida (Qwen) | Linha de base | Busca nova + v2 | Busca nova + v3 |
+|---|---|---|---|
+| Comportamento correto | 100% | 100% | 100% |
+| Trechos não encontrados (v2) | 1 | 2 | 2 |
+| Registro citado como relato | 1 | 0 | 0 |
+| Respostas com termos de frequência | 13 | 12 | 10 |
+| Respostas com contagem | 18 | 24 | 24 |
+| Fidelidade ajustada | 94,7% | 91,7% | 86,3% |
+
+- **Tempos não comparáveis:** com duas chamadas seguidas ao mesmo modelo e intervalo de 25 s, a
+  reserva de tokens do Groq (entrada + máximo de saída) estourou o limite por minuto e a
+  biblioteca esperou sozinha, inflando o cronômetro (medianas de 8,6 s e 5,3 s). O tempo real de
+  geração segue em ~1,5 s. Intervalo aumentado para 35 s.
+
+### Diagnóstico: a queda da fidelidade vinha das contagens
+- A fidelidade caiu justamente com a busca melhor. A inspeção das justificativas do juiz
+  (`src/avaliacao/inspecionar_fidelidade.py`) mostrou que 9 de 11 (v2) e 16 de 19 (v3) afirmações
+  não sustentadas eram **contagens** que não batiam com as citações ("8 das avaliações
+  recuperadas" citando 2; "18" citando 19; "9 das 20" sem citação). O juiz estava certo.
+- **Causa:** a regra 4 do prompt (Etapa 3) sugeria "N das avaliações recuperadas" como alternativa
+  a "a maioria". Com a busca melhor, quase todas as 20 evidências são relevantes, e o modelo passou
+  a contar números grandes citando só exemplos.
+- **Problema conceitual:** mesmo correta, a contagem é frequência disfarçada. A busca escolhe as
+  avaliações pelo assunto; dizer que "18 das 20 mencionam entrega antes do prazo" mede a busca, não
+  os clientes. Frequências reais exigem contar na base inteira (Etapa 6).
+- Fora as contagens, restaram 2 (v2) e 3 (v3) erros de conteúdo em mais de 130 afirmações cada,
+  todos de citação trocada ou fraca.
+
+### Prompt v4 e detector de contagens
+- **Prompt v4** = v3 com a regra 4 reescrita: proíbe contar avaliações ou clientes da amostra e
+  usar porcentagens; a única quantidade permitida é o "aparece Nx", que conta textos idênticos no
+  recorte inteiro.
+- **Detector de contagens no código** (`encontrar_contagens`, fora da seção Limitações), seguindo a
+  lição da Etapa 4 de não confiar só no prompt. Validado nas respostas salvas: as contagens já
+  apareciam em 18 das 24 respostas não recusadas da linha de base e em todas as 24 com a busca nova.
+- Meta do v4: respostas com contagem perto de zero e fidelidade de volta ao patamar da linha de
+  base ou acima.
+
+  ### Prompt v4: sem contagens (parte 3c, continuação)
+
+| Medida (Qwen, busca nova) | Prompt v3 | Prompt v4 |
+|---|---|---|
+| Respostas com contagem | 20 | 1 |
+| Respostas com termos de frequência | 10 | 16 |
+| Fidelidade ajustada | 86,3% | 98,4% |
+| Interpretação com fatos novos | 1 | 0 |
+
+- O diagnóstico se confirmou: sem as contagens, a fidelidade voltou e passou do patamar da linha
+  de base (94,7%). Com o intervalo de 35 s, os tempos voltaram ao normal (1,6 s).
+- **Efeito "cobertor curto":** proibido de contar, o modelo trocou números por palavras
+  ("os clientes elogiam principalmente X", "chegam frequentemente antes do prazo", "queixas
+  recorrentes", "falha sistêmica"). É a mesma afirmação de frequência sobre uma amostra escolhida
+  pelo assunto, mas sem número para conferir, e o juiz não pune.
+- Das 5 respostas que o detector apontou com contagem, 4 eram falsos alarmes: 3 recusas
+  ("nenhuma das 20 avaliações menciona...") e 1 trecho literal do cliente ("100% de descaso").
+- **Detectores refinados:** passam a ignorar trechos entre aspas (fala do cliente), a seção
+  Limitações e, nas contagens, as recusas. Recalculados para todas as configurações.
+
+### Correção guiada pelo verificador
+- Decisão: não fazer um prompt v5. Três versões de prompt (v2, v3, v4) não eliminaram as
+  afirmações de frequência; insistir seria ajustar o sistema às 31 perguntas da prova.
+- **Mecanismo:** se os detectores encontram termos de frequência ou contagens, uma chamada extra
+  pede ao modelo que reescreva só essas expressões. O código aceita a correção apenas se: nenhuma
+  citação nova, no máximo 20% de citações a menos, nenhum trecho inexistente ou registro como
+  relato a mais e menos problemas de frequência. Senão, fica a resposta original.
+- **Avaliação isolada:** a correção foi aplicada às respostas v4 já salvas (mesmas perguntas,
+  evidências e respostas); a única diferença entre as configurações é a correção.
+- **Correção v1** (guardada como `..._corrigida_v1`): 16 aplicadas, 0 rejeitadas. Zerou termos e
+  contagens, mas apagar o termo **universalizava** a frase: "a grande maioria das entregas ocorreu
+  no prazo" virou "essas entregas ocorreram no prazo"; numa Interpretação, a frase nova contradizia
+  os atrasos citados logo depois.
+- **Correção v2:** troca a frequência por **existência** ("há relatos de X", "há clientes que...")
+  e proíbe afirmações sobre todos.
+
+| Medida (Qwen) | v4 | Correção v1 | Correção v2 |
+|---|---|---|---|
+| Respostas com termos de frequência / contagem | 16 / 1 | 0 / 0 | 0 / 0 |
+| Fidelidade ajustada | 98,4% | 96,9% | 97,7% |
+| Interpretação com fatos novos | 0 | 2 | 0 |
+
+- As 2 parciais da correção v2 não vêm dela (uma citação trocada que já existia no v4 e uma
+  implicância do juiz entre "no prazo" e "antes do prazo"). A diferença para o v4 é de cerca de
+  uma afirmação em 129, dentro da variação do juiz.
+
+### Configuração final da Etapa 5
+Busca densa + reescrita da pergunta + reranker, prompt v4 e correção v2 guiada pelo verificador
+(padrão do `pipeline` e da linha de comando).
+
+| Medida | Linha de base (Etapa 4) | Final (Etapa 5) |
+|---|---|---|
+| Precisão da busca (@20) | 0,821 | 0,935 |
+| Comportamento correto | 100% | 100% |
+| Fidelidade ajustada | 94,7% | 97,7% |
+| Registro citado como relato | 1 | 0 |
+| Respostas com termos de frequência / contagem | 13 / 15 | 0 / 0 |
+| Tempo por pergunta | ~1,7 s | ~7 a 9 s |
+
+- **Custo:** a reescrita (~1,5 s), o reranker (~5 s) e a correção (~1,5 s, em cerca de metade das
+  respostas) somam alguns segundos, aceitáveis para quem espera uma análise.
+- **Limitações declaradas:** juiz de fidelidade leniente com erros sutis (números são teto);
+  inversões de sentido não são detectadas automaticamente; a P13 segue a pergunta mais difícil
+  para a busca (precisão 0,55); a reescrita custa precisão nas perguntas agregadas (viés de
+  confirmação), tratadas na Etapa 6.

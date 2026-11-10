@@ -1,0 +1,188 @@
+{
+  "P01": {
+    "pergunta": "Quais são os principais problemas relatados pelos clientes em suas avaliações?",
+    "reescrita": "O produto chegou com a embalagem amassada e o item estava quebrado. A entrega demorou muito mais do que o prazo prometido e ninguém me avisou. O atendimento foi muito lento e não resolveram meu problema de troca.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P02": {
+    "pergunta": "O que os clientes relatam sobre problemas relacionados à entrega?",
+    "reescrita": "A entrega chegou atrasada e ninguém me avisou sobre o problema. O pacote chegou danificado e o produto estava quebrado dentro. Tive que ligar várias vezes para a transportadora para saber onde estava meu pedido.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P03": {
+    "pergunta": "Quais aspectos da experiência de compra são mais elogiados pelos clientes?",
+    "reescrita": "O produto chegou muito antes do prazo e estava impecável. O atendimento foi rápido e resolveu minha dúvida na hora. A embalagem estava muito bem protegida, sem nenhum dano.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P04": {
+    "pergunta": "Quais padrões podem ser identificados nas avaliações de clientes insatisfeitos?",
+    "reescrita": "O produto chegou com a embalagem amassada e o item quebrado. A entrega demorou muito mais do que o prazo prometido e ninguém me avisou. O atendimento foi muito lento e não resolveram meu problema de troca.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P05": {
+    "pergunta": "Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega?",
+    "reescrita": "A entrega demorou muito mais do que o prazo prometido pela transportadora. Meu pedido chegou atrasado e ninguém me avisou sobre o novo prazo. Já é a segunda vez que a entrega não chega no prazo combinado.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P06": {
+    "pergunta": "Quais são os principais problemas relatados nas avaliações com nota baixa?",
+    "reescrita": "O produto chegou com a embalagem amassada e o item quebrado. A entrega demorou muito mais do que o prazo prometido. O atendimento foi lento e não resolveram meu problema.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P07": {
+    "pergunta": "O que os clientes mais elogiam nos produtos desta categoria?",
+    "reescrita": "A qualidade do material é excelente e o acabamento ficou perfeito. O produto chegou exatamente como na foto e cumpre o que promete. O tamanho é ideal e o uso diário ficou muito mais confortável.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P08": {
+    "pergunta": "Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias?",
+    "reescrita": "A entrega chegou atrasada e ninguém me avisou sobre o problema. O entregador deixou o pacote em um lugar errado e eu quase perdi a compra. A caixa chegou amassada e o produto veio quebrado por causa do transporte.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P09": {
+    "pergunta": "O que os clientes relatam sobre produtos que chegaram quebrados ou danificados?",
+    "reescrita": "Chegou quebrado e não adiantou nada. O produto veio danificado na caixa. Recebi a mercadoria com a embalagem amassada e o item trincado.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P10": {
+    "pergunta": "Há relatos de produtos diferentes do que foi anunciado no site?",
+    "reescrita": "Chegou um produto completamente diferente do que estava na foto do site. A descrição prometia uma cor específica, mas o item que recebi era de outra tonalidade. O modelo que chegou não corresponde ao que foi anunciado na página do produto.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P11": {
+    "pergunta": "O que os clientes dizem sobre pedidos que chegaram com itens faltando?",
+    "reescrita": "Chegou sem o item que eu tinha pedido, faltou uma peça importante. Meu pacote veio incompleto, faltou um produto da lista. Recebi o pedido com itens faltando, não veio tudo o que comprei.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P12": {
+    "pergunta": "Como os clientes descrevem a embalagem dos produtos recebidos?",
+    "reescrita": "A embalagem chegou bem amassada e o produto quase quebrou. O pacote veio todo rasgado e sujo de lama. A caixa estava bem protegida e o produto chegou intacto.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P13": {
+    "pergunta": "O que os clientes relatam sobre o atendimento ao tentar resolver um problema?",
+    "reescrita": "O atendimento foi muito prestativo e resolveu meu problema rapidamente. Fiquei insatisfeito porque o suporte demorou para me responder e não resolveram a questão. A equipe de atendimento foi educada, mas não conseguiram resolver o problema que eu tinha.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P14": {
+    "pergunta": "Há reclamações de pedidos que aparecem como entregues, mas que o cliente não recebeu?",
+    "reescrita": "Meu pedido apareceu como entregue na transportadora, mas eu não recebi nada. O status mudou para entregue, porém a mercadoria nunca chegou na minha casa. Acompanhei a entrega e vi que foi marcada como concluída, mas o pacote não está aqui.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P15": {
+    "pergunta": "O que os clientes relatam sobre os Correios?",
+    "reescrita": "Meu pedido demorou muito para sair dos Correios e eu não recebi nenhuma atualização. A entrega pelos Correios foi rápida e o pacote chegou em perfeito estado. Tive que ir até a agência dos Correios para retirar meu pedido porque o carteiro não entregou.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P16": {
+    "pergunta": "O que os clientes comentam quando o produto chega antes do prazo previsto?",
+    "reescrita": "Chegou muito antes do prazo que estava previsto, fiquei surpresa com a agilidade. A entrega foi feita dias antes do combinado, superou minhas expectativas. Recebi o pedido antes do prazo estimado, foi uma grata surpresa.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P17": {
+    "pergunta": "Há relatos de dificuldade para trocar ou devolver produtos?",
+    "reescrita": "Tive muita dificuldade para devolver o produto, o processo foi burocrático e demorado. A troca do item não aconteceu como prometido, precisei insistir várias vezes no atendimento. Foi um pesadelo tentar trocar a peça, a empresa não resolveu o problema rapidamente.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P18": {
+    "pergunta": "O que os clientes falam sobre a loja Lannister?",
+    "reescrita": "A loja Lannister tem um atendimento muito atencioso e rápido. Os produtos da Lannister chegaram bem embalados e dentro do prazo. Gostei muito da variedade de itens que a Lannister oferece.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P19": {
+    "pergunta": "Quais problemas os clientes relatam?",
+    "reescrita": "O produto chegou com a embalagem amassada e o item quebrado. A entrega demorou muito mais do que o prazo prometido. O atendimento foi lento e não resolveram meu problema.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P20": {
+    "pergunta": "O que os clientes relatam sobre o atraso na entrega?",
+    "reescrita": "Meu pedido chegou muito depois do prazo prometido pela transportadora. Fiquei dias sem saber onde estava a encomagem e o atraso foi enorme. A entrega atrasou bastante e eu precisei cobrar o suporte várias vezes.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P21": {
+    "pergunta": "Como os clientes avaliam a experiência de entrega?",
+    "reescrita": "A entrega chegou bem antes do prazo prometido. O entregador foi muito educado e deixou o pedido no local combinado. Meu pacote chegou com a caixa amassada, mas o produto estava intacto.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P22": {
+    "pergunta": "O que os clientes relatam sobre as compras feitas neste período?",
+    "reescrita": "A entrega chegou bem antes do prazo prometido. O produto veio exatamente como descrito na página. Foi minha primeira compra e a experiência foi muito tranquila.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P23": {
+    "pergunta": "O que os clientes elogiam?",
+    "reescrita": "O produto chegou muito antes do prazo e estava impecável. A embalagem estava super bem protegida, sem nenhum dano. O atendimento foi rápido e resolveu minha dúvida na hora.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P24": {
+    "pergunta": "Qual foi o faturamento da Olist em 2018?",
+    "reescrita": "",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P25": {
+    "pergunta": "Qual é o melhor celular para comprar em 2026?",
+    "reescrita": "",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P26": {
+    "pergunta": "Como configurar um roteador de internet sem fio?",
+    "reescrita": "",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P27": {
+    "pergunta": "Qual a previsão do tempo para São Paulo amanhã?",
+    "reescrita": "",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P28": {
+    "pergunta": "O que os clientes dizem sobre pagar as compras com criptomoedas?",
+    "reescrita": "Paguei com criptomoedas e o processo foi muito rápido e seguro. A opção de pagar com criptomoedas facilitou minha compra e não tive nenhum problema. Fiquei satisfeito em poder usar criptomoedas para pagar, foi uma experiência tranquila.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P29": {
+    "pergunta": "O que os clientes relatam sobre a entrega feita por drones?",
+    "reescrita": "A entrega por drones foi muito rápida e o pacote chegou intacto. Fiquei impressionado com a precisão do drone ao deixar a encomenda no local certo. O processo de entrega por drones foi tranquilo e sem nenhum atraso.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P30": {
+    "pergunta": "Como os clientes avaliam o provador virtual de roupas em realidade aumentada?",
+    "reescrita": "O provador virtual de realidade aumentada é muito fácil de usar e me ajudou a escolher o tamanho certo. A tecnologia de realidade aumentada ficou um pouco travada, mas consegui visualizar a roupa no meu corpo. Gostei muito do provador virtual, pois me deu segurança para comprar sem precisar ir à loja física.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  },
+  "P31": {
+    "pergunta": "Quais problemas os clientes relatam sobre a entrega?",
+    "reescrita": "A entrega chegou atrasada e ninguém me avisou. O pacote chegou amassado e o produto veio quebrado. O entregador deixou a encomenda em um lugar errado e eu precisei ir buscar.",
+    "modelo": "qwen/qwen3.8-27b",
+    "versao": "v2"
+  }
+}
