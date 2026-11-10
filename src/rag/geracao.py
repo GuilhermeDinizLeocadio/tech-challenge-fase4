@@ -4,22 +4,25 @@ O LLM recebe só as evidências recuperadas, numeradas [R1], [R2]..., o recorte 
 (filtros e tamanho) e regras que o obrigam a: usar apenas esse contexto, citar cada ponto,
 não inventar frequências nem causas, separar relato do cliente de registro do sistema e
 recusar quando as evidências não bastam. Depois, o código confere automaticamente:
-citações inexistentes, trechos entre aspas, termos de frequência proibidos, contagens e se
-houve recusa.
+citações inexistentes, trechos entre aspas, termos de frequência, contagens e se houve recusa.
 
 Versões do prompt e do contexto:
 - v2 (Etapa 3): ajustes feitos após a comparação gpt-oss-120b x qwen3.8-27b.
 - v3 (Etapa 5): o contexto rotula "Registro do sistema" e "Texto do cliente" e o prompt restringe
   as aspas ao texto do cliente, sem costurar frases (erro dominante encontrado na Etapa 4).
-- v4 (Etapa 5): igual ao v3, mas proíbe contar avaliações ou clientes da amostra recuperada
-  ("8 das avaliações"): com a busca melhor, as contagens cresceram, ficaram inverificáveis e,
-  mesmo quando certas, eram frequência disfarçada (a busca escolhe as avaliações pelo assunto).
+- v4 (Etapa 5, padrão): igual ao v3, mas proíbe contar avaliações ou clientes da amostra
+  recuperada ("8 das avaliações"): com a busca melhor, as contagens cresceram, ficaram
+  inverificáveis e, mesmo quando certas, eram frequência disfarçada.
 
 Verificador de trechos:
 - v1 (verificar_trechos, Etapa 3): mantido sem mudanças, para comparação.
 - v2 (classificar_trechos, Etapa 5): ignora inserções editoriais [entre colchetes], separa
-  trechos que são termos da própria pergunta e trechos que vêm do REGISTRO apresentados como
-  fala do cliente.
+  trechos que são termos da própria pergunta e trechos do REGISTRO apresentados como fala do
+  cliente.
+
+Correção guiada pelo verificador (Etapa 5): se a resposta tiver termos de frequência ou
+contagens, uma chamada extra pede ao modelo que reescreva SÓ essas expressões. O código aceita a
+correção apenas se ela não piorar as citações nem os trechos e reduzir os problemas.
 """
 import os
 import re
@@ -47,7 +50,7 @@ PARAMETROS_EXTRAS = {
 }
 
 FRASE_RECUSA = "As avaliações recuperadas não são suficientes para responder a esta pergunta."
-VERSAO_PADRAO = "v2"
+VERSAO_PADRAO = "v4"  # configuração final da Etapa 5
 
 # Termos que indicam frequência na base inteira, proibidos pela regra 4 (verificados no código)
 TERMOS_FREQUENCIA = re.compile(
@@ -159,6 +162,22 @@ compra (produto, entrega, atendimento, loja)."""
 
 PROMPTS = {versao: _montar_prompt(versao) for versao in ("v2", "v3", "v4")}
 PROMPT_SISTEMA = PROMPTS["v2"]  # compatibilidade com o código das etapas anteriores
+
+PROMPT_CORRECAO = """Você revisa respostas de um analista de Voice of Customer.
+A resposta abaixo usa expressões de frequência ou contagens que não podem ser sustentadas, porque
+as avaliações foram escolhidas por semelhança com a pergunta e não representam a base inteira.
+Reescreva a resposta substituindo APENAS estas expressões: {lista}.
+Como substituir: troque a afirmação de frequência por uma afirmação de EXISTÊNCIA, que diz que os
+relatos existem sem dizer quantos. Nunca transforme a frase numa afirmação sobre todos.
+Exemplos:
+- "os clientes elogiam principalmente X" → "há clientes que elogiam X"
+- "há queixas recorrentes sobre X" → "há queixas sobre X"
+- "a maioria das entregas ocorreu no prazo" → "há relatos de entregas no prazo"
+- "frequentemente associam X a Y" → "há clientes que associam X a Y"
+- "8 das avaliações relatam X" → "há relatos de X"
+Regras: mantenha exatamente as mesmas seções, os mesmos pontos, as mesmas citações [R#] e os
+mesmos trechos entre aspas; não acrescente fatos, citações nem trechos novos.
+Devolva somente a resposta reescrita, em Markdown."""
 
 NOMES_OPERADORES = {"$eq": "=", "$ne": "≠", "$gt": ">", "$gte": "≥",
                     "$lt": "<", "$lte": "≤", "$in": "em"}
@@ -302,10 +321,31 @@ def classificar_trechos(texto: str, evidencias: pd.DataFrame, pergunta: str = ""
     return resultado
 
 
+def _texto_proprio(texto: str) -> str:
+    """O texto escrito pelo modelo: sem a seção Limitações e sem os trechos entre aspas
+    (a fala do cliente pode conter "100%" ou "frequente" sem que isso seja um erro)."""
+    return PADRAO_TRECHO.sub(" ", texto.split("## Limitações")[0])
+
+
+def encontrar_termos_frequencia(texto: str) -> list[str]:
+    """Termos de frequência escritos pelo modelo (fora das aspas e das Limitações)."""
+    return sorted({t.lower() for t in TERMOS_FREQUENCIA.findall(_texto_proprio(texto))})
+
+
 def encontrar_contagens(texto: str) -> list[str]:
-    """Contagens de avaliações/clientes e porcentagens na resposta, fora da seção Limitações."""
-    corpo = texto.split("## Limitações")[0]
-    return [m.group(0) for m in PADRAO_CONTAGEM.finditer(corpo)]
+    """Contagens de avaliações/clientes e porcentagens escritas pelo modelo.
+
+    Ignora recusas ("nenhuma das 20 avaliações menciona..." é o que uma recusa deve dizer),
+    os trechos entre aspas e a seção Limitações.
+    """
+    if FRASE_RECUSA in texto:
+        return []
+    return [m.group(0) for m in PADRAO_CONTAGEM.finditer(_texto_proprio(texto))]
+
+
+def problemas_de_frequencia(texto: str) -> list[str]:
+    """Tudo o que a correção deve remover: termos de frequência e contagens."""
+    return sorted(set(encontrar_termos_frequencia(texto)) | set(encontrar_contagens(texto)))
 
 
 def criar_cliente(provedor: str) -> OpenAI:
@@ -316,16 +356,8 @@ def criar_cliente(provedor: str) -> OpenAI:
     return OpenAI(base_url=base_url, api_key=chave)
 
 
-def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None = None,
-                   provedor: str = "groq", tentativas: int = 3,
-                   versao_prompt: str = VERSAO_PADRAO) -> dict:
-    """Chama o LLM e devolve a resposta com métricas e verificações automáticas."""
-    modelo = modelo or os.getenv("LLM_MODELO")
-    cliente = criar_cliente(provedor)
-    mensagens = [{"role": "system", "content": PROMPTS[versao_prompt]},
-                 {"role": "user",
-                  "content": montar_mensagem_usuario(pergunta, evidencias, versao_prompt)}]
-
+def _chamar(cliente: OpenAI, modelo: str, mensagens: list[dict], tentativas: int = 3):
+    """Uma chamada ao LLM, esperando e tentando de novo se o limite gratuito for atingido."""
     for tentativa in range(1, tentativas + 1):
         try:
             inicio = time.perf_counter()
@@ -333,31 +365,79 @@ def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None =
                 model=modelo, messages=mensagens, temperature=0, max_tokens=1500,
                 extra_body=PARAMETROS_EXTRAS.get(modelo, {}),
             )
-            duracao = time.perf_counter() - inicio
-            break
+            return resposta, time.perf_counter() - inicio
         except RateLimitError:
-            # Camada gratuita: ao estourar o limite por minuto, espera e tenta de novo
             espera = 20 * tentativa
             print(f"Limite de uso atingido; aguardando {espera}s (tentativa {tentativa}/{tentativas})")
             time.sleep(espera)
-    else:
-        raise RuntimeError("Limite de uso persistente; tente novamente mais tarde.")
+    raise RuntimeError("Limite de uso persistente; tente novamente mais tarde.")
 
-    texto = (resposta.choices[0].message.content or "").strip()
+
+def _verificacoes(texto: str, evidencias: pd.DataFrame, pergunta: str) -> dict:
+    """Todas as verificações automáticas de uma resposta."""
     citacoes = extrair_citacoes(texto)
     validas = set(evidencias["ref"])
-    trechos = classificar_trechos(texto, evidencias, pergunta)
+    return {
+        "recusou": FRASE_RECUSA in texto,
+        "citacoes": sorted(set(citacoes), key=lambda r: int(r[1:])),
+        "citacoes_invalidas": sorted({c for c in citacoes if c not in validas}),
+        **classificar_trechos(texto, evidencias, pergunta),
+        "termos_frequencia": encontrar_termos_frequencia(texto),
+        "contagens": encontrar_contagens(texto),
+    }
+
+
+def gerar_resposta(pergunta: str, evidencias: pd.DataFrame, modelo: str | None = None,
+                   provedor: str = "groq", versao_prompt: str = VERSAO_PADRAO) -> dict:
+    """Chama o LLM e devolve a resposta com métricas e verificações automáticas."""
+    modelo = modelo or os.getenv("LLM_MODELO")
+    cliente = criar_cliente(provedor)
+    mensagens = [{"role": "system", "content": PROMPTS[versao_prompt]},
+                 {"role": "user",
+                  "content": montar_mensagem_usuario(pergunta, evidencias, versao_prompt)}]
+    resposta, duracao = _chamar(cliente, modelo, mensagens)
+    texto = (resposta.choices[0].message.content or "").strip()
     return {
         "modelo": modelo,
         "versao_prompt": versao_prompt,
         "resposta": texto,
-        "recusou": FRASE_RECUSA in texto,
-        "citacoes": sorted(set(citacoes), key=lambda r: int(r[1:])),
-        "citacoes_invalidas": sorted({c for c in citacoes if c not in validas}),
-        **trechos,
-        "termos_frequencia": sorted({t.lower() for t in TERMOS_FREQUENCIA.findall(texto)}),
-        "contagens": encontrar_contagens(texto),
+        **_verificacoes(texto, evidencias, pergunta),
         "tokens_entrada": resposta.usage.prompt_tokens if resposta.usage else None,
         "tokens_saida": resposta.usage.completion_tokens if resposta.usage else None,
         "segundos": round(duracao, 1),
     }
+
+
+def corrigir_resposta(pergunta: str, evidencias: pd.DataFrame, resultado: dict,
+                      modelo: str | None = None, provedor: str = "groq") -> dict:
+    """Correção guiada pelo verificador: uma reescrita só das expressões de frequência.
+
+    A correção só é aceita se, pelos critérios do código: as citações não aumentarem nem caírem
+    mais de 20%; não surgir trecho inexistente nem registro citado como relato a mais; e o
+    número de problemas de frequência diminuir. Caso contrário, fica a resposta original.
+    """
+    problemas = problemas_de_frequencia(resultado["resposta"])
+    if resultado["recusou"] or not problemas:
+        return {**resultado, "correcao": "não necessária"}
+
+    modelo = modelo or resultado["modelo"]
+    lista = ", ".join(f'"{p}"' for p in problemas)
+    mensagens = [{"role": "system", "content": PROMPT_CORRECAO.format(lista=lista)},
+                 {"role": "user", "content": resultado["resposta"]}]
+    resposta, duracao = _chamar(criar_cliente(provedor), modelo, mensagens)
+    novo = (resposta.choices[0].message.content or "").strip()
+    novo = re.sub(r"<think>.*?</think>", "", novo, flags=re.S).strip()
+    v = _verificacoes(novo, evidencias, pergunta)
+
+    antes, depois = set(resultado["citacoes"]), set(v["citacoes"])
+    aceita = (bool(novo) and "## Resposta" in novo and not v["recusou"]
+              and depois <= antes and len(depois) >= 0.8 * len(antes)
+              and len(v["trechos_nao_encontrados"]) <= len(resultado["trechos_nao_encontrados"])
+              and len(v["registro_como_relato"]) <= len(resultado["registro_como_relato"])
+              and len(problemas_de_frequencia(novo)) < len(problemas))
+    if not aceita:
+        return {**resultado, "correcao": "rejeitada", "problemas_antes": problemas}
+    return {**resultado, **v, "resposta": novo, "resposta_original": resultado["resposta"],
+            "correcao": "aplicada", "problemas_antes": problemas,
+            "segundos_correcao": round(duracao, 1),
+            "tokens_correcao": resposta.usage.total_tokens if resposta.usage else None}

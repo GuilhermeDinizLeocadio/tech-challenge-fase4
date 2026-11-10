@@ -752,3 +752,69 @@ rodada.
   apareciam em 18 das 24 respostas não recusadas da linha de base e em todas as 24 com a busca nova.
 - Meta do v4: respostas com contagem perto de zero e fidelidade de volta ao patamar da linha de
   base ou acima.
+
+  ### Prompt v4: sem contagens (parte 3c, continuação)
+
+| Medida (Qwen, busca nova) | Prompt v3 | Prompt v4 |
+|---|---|---|
+| Respostas com contagem | 20 | 1 |
+| Respostas com termos de frequência | 10 | 16 |
+| Fidelidade ajustada | 86,3% | 98,4% |
+| Interpretação com fatos novos | 1 | 0 |
+
+- O diagnóstico se confirmou: sem as contagens, a fidelidade voltou e passou do patamar da linha
+  de base (94,7%). Com o intervalo de 35 s, os tempos voltaram ao normal (1,6 s).
+- **Efeito "cobertor curto":** proibido de contar, o modelo trocou números por palavras
+  ("os clientes elogiam principalmente X", "chegam frequentemente antes do prazo", "queixas
+  recorrentes", "falha sistêmica"). É a mesma afirmação de frequência sobre uma amostra escolhida
+  pelo assunto, mas sem número para conferir, e o juiz não pune.
+- Das 5 respostas que o detector apontou com contagem, 4 eram falsos alarmes: 3 recusas
+  ("nenhuma das 20 avaliações menciona...") e 1 trecho literal do cliente ("100% de descaso").
+- **Detectores refinados:** passam a ignorar trechos entre aspas (fala do cliente), a seção
+  Limitações e, nas contagens, as recusas. Recalculados para todas as configurações.
+
+### Correção guiada pelo verificador
+- Decisão: não fazer um prompt v5. Três versões de prompt (v2, v3, v4) não eliminaram as
+  afirmações de frequência; insistir seria ajustar o sistema às 31 perguntas da prova.
+- **Mecanismo:** se os detectores encontram termos de frequência ou contagens, uma chamada extra
+  pede ao modelo que reescreva só essas expressões. O código aceita a correção apenas se: nenhuma
+  citação nova, no máximo 20% de citações a menos, nenhum trecho inexistente ou registro como
+  relato a mais e menos problemas de frequência. Senão, fica a resposta original.
+- **Avaliação isolada:** a correção foi aplicada às respostas v4 já salvas (mesmas perguntas,
+  evidências e respostas); a única diferença entre as configurações é a correção.
+- **Correção v1** (guardada como `..._corrigida_v1`): 16 aplicadas, 0 rejeitadas. Zerou termos e
+  contagens, mas apagar o termo **universalizava** a frase: "a grande maioria das entregas ocorreu
+  no prazo" virou "essas entregas ocorreram no prazo"; numa Interpretação, a frase nova contradizia
+  os atrasos citados logo depois.
+- **Correção v2:** troca a frequência por **existência** ("há relatos de X", "há clientes que...")
+  e proíbe afirmações sobre todos.
+
+| Medida (Qwen) | v4 | Correção v1 | Correção v2 |
+|---|---|---|---|
+| Respostas com termos de frequência / contagem | 16 / 1 | 0 / 0 | 0 / 0 |
+| Fidelidade ajustada | 98,4% | 96,9% | 97,7% |
+| Interpretação com fatos novos | 0 | 2 | 0 |
+
+- As 2 parciais da correção v2 não vêm dela (uma citação trocada que já existia no v4 e uma
+  implicância do juiz entre "no prazo" e "antes do prazo"). A diferença para o v4 é de cerca de
+  uma afirmação em 129, dentro da variação do juiz.
+
+### Configuração final da Etapa 5
+Busca densa + reescrita da pergunta + reranker, prompt v4 e correção v2 guiada pelo verificador
+(padrão do `pipeline` e da linha de comando).
+
+| Medida | Linha de base (Etapa 4) | Final (Etapa 5) |
+|---|---|---|
+| Precisão da busca (@20) | 0,821 | 0,935 |
+| Comportamento correto | 100% | 100% |
+| Fidelidade ajustada | 94,7% | 97,7% |
+| Registro citado como relato | 1 | 0 |
+| Respostas com termos de frequência / contagem | 13 / 15 | 0 / 0 |
+| Tempo por pergunta | ~1,7 s | ~7 a 9 s |
+
+- **Custo:** a reescrita (~1,5 s), o reranker (~5 s) e a correção (~1,5 s, em cerca de metade das
+  respostas) somam alguns segundos, aceitáveis para quem espera uma análise.
+- **Limitações declaradas:** juiz de fidelidade leniente com erros sutis (números são teto);
+  inversões de sentido não são detectadas automaticamente; a P13 segue a pergunta mais difícil
+  para a busca (precisão 0,55); a reescrita custa precisão nas perguntas agregadas (viés de
+  confirmação), tratadas na Etapa 6.
