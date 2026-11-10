@@ -818,3 +818,90 @@ Busca densa + reescrita da pergunta + reranker, prompt v4 e correção v2 guiada
   inversões de sentido não são detectadas automaticamente; a P13 segue a pergunta mais difícil
   para a busca (precisão 0,55); a reescrita custa precisão nas perguntas agregadas (viés de
   confirmação), tratadas na Etapa 6.
+
+
+  ## Etapa 6 — Camada de temas (perguntas agregadas)
+
+### Por que
+A busca traz as 20 avaliações mais parecidas com a pergunta; "quais são os principais
+problemas?" exige contar na base inteira. Na Etapa 5, isso apareceu como frequências inventadas
+("principalmente", "8 das 20"), que tivemos de proibir. A camada de temas atribui um tema a cada
+avaliação e permite contar de verdade, em qualquer recorte.
+
+### Construção (`src/temas/construir_temas.py`)
+- **Temas vindos dos dados, não de uma lista pronta:** as avaliações são agrupadas pela
+  semelhança do que dizem e só depois o LLM dá nome aos grupos. Um assunto que ninguém imaginou
+  também pode virar tema (evita o viés de confirmação visto na reescrita da Etapa 5).
+- **Vetores:** os mesmos embeddings da busca, lidos do índice.
+- **Dois grupos pela nota:** problemas (notas 1 a 3, 14.460 avaliações) e elogios (notas 4 e 5,
+  27.791). O embedding capta assunto, não polaridade (Etapa 2).
+- **K-means, K = 20 por grupo**, definido antes de ver os resultados; textos idênticos entram uma
+  vez, com peso igual ao número de repetições.
+- **Nomes:** o juiz lê as 15 avaliações mais típicas e 10 sorteadas de cada grupo e devolve nome,
+  descrição e se o grupo é coerente.
+- **Validação externa:** o agrupamento usou só o texto, mas o registro do sistema confirma os
+  temas: "Atraso na entrega" tem 82,5% de entregas atrasadas ou não entregues no registro;
+  "Produto diferente do anunciado", 2,9%.
+
+### Macrotemas (`src/temas/consolidar_temas.py`)
+- O K-means separa também pelo jeito de escrever: "não entrega" apareceu em 6 temas e "elogio à
+  entrega rápida" em 7. K não foi alterado (seria ajustar o número ao que se quer ver): os temas
+  com o mesmo assunto foram reunidos em macrotemas pelo juiz, com regras conferidas pelo código
+  (5 a 10 por grupo, cada tema em exatamente um). O juiz violou a regra 2 vezes no grupo de
+  elogios, e o código recusou e pediu de novo.
+
+| Problemas (notas 1 a 3) | Avaliações | % | Entrega com problema (registro) |
+|---|---|---|---|
+| Atraso na entrega | 3.255 | 22,5% | 66,0% |
+| Não entrega do pedido | 2.859 | 19,8% | 58,0% |
+| Produto errado ou divergente | 2.351 | 16,3% | 6,6% |
+| Entrega incompleta | 1.841 | 12,7% | 5,4% |
+| Baixa qualidade do produto | 1.025 | 7,1% | 4,6% |
+| Problemas de logística e frete | 870 | 6,0% | 21,7% |
+| Mistas ou genéricas (fora do ranking) | 2.259 | 15,6% | 24,7% |
+
+| Elogios (notas 4 e 5) | Avaliações | % |
+|---|---|---|
+| Elogio à entrega rápida | 11.786 | 42,4% |
+| Qualidade dos produtos | 4.036 | 14,5% |
+| Qualidade e atendimento geral | 2.883 | 10,4% |
+| Beleza e acabamento | 1.952 | 7,0% |
+| Mistas ou genéricas (fora do ranking) | 7.134 | 25,7% |
+
+- **Achados:**
+  - atraso e não entrega somam 42% das avaliações de problema com texto, o que confirma, por outro
+    caminho, a EDA da Etapa 1 (metade das notas 1 vem de pedidos atrasados ou não entregues);
+  - **a entrega aparece dos dois lados:** é o maior elogio (42%) e, somando atraso e não entrega,
+    a maior reclamação (42%);
+  - **"não recebi", mas o registro diz "entregue no prazo":** em "Não entrega do pedido", só 58%
+    têm entrega problemática no registro; cerca de 1.200 clientes dizem não ter recebido um pedido
+    que o sistema registra como entregue no prazo (falha na baixa ou extravio após a baixa);
+  - **problemas atrás de notas altas:** o subtema E07 reúne 1.622 avaliações com nota 4 ou 5 que
+    relatam pedidos incompletos e problemas de frete (foi para "mistas ou genéricas" pelas regras).
+
+### Validação humana da atribuição (20 avaliações sorteadas, consenso)
+- Macrotema correto: **75%** (problemas **90%**, elogios **60%**).
+- Erros dos elogios: elogios de uma palavra ("Excelente") caem em temas específicos, e "chegou"
+  puxa para "entrega rápida" mesmo quando o cliente fala do estado do produto. Os números de
+  problemas são confiáveis; os de elogios, aproximados (provavelmente inflados nos temas maiores).
+
+### Roteador e resposta agregada
+- **Roteador** (`src/rag/roteador.py`): uma chamada curta ao Qwen classifica a pergunta como
+  agregada (visão do conjunto) ou específica (assunto determinado). Na dúvida ou em falha, a rota
+  é a específica, validada na Etapa 5.
+- **Panorama** (`src/temas/panorama.py`): conta as avaliações com texto do recorte (respeitando os
+  filtros) por macrotema e escolhe as 3 avaliações mais típicas (com 5 ou mais palavras) de cada
+  um dos 5 maiores temas como exemplos.
+- **Resposta agregada** (`src/temas/resposta_agregada.py`): o modelo copia os números do panorama
+  e ilustra cada tema com exemplos citados. **Verificação nova no código:** todo número seguido de
+  "%" ou "avaliações" na resposta precisa existir no panorama.
+- Teste com a P01: tabela com os 7 macrotemas, exemplos citados, todas as verificações limpas e
+  nenhum número fora do panorama, em 2 s.
+- **Avaliação do roteador** (31 perguntas): 27 de 31 (87%) em relação à marcação "agregada" da
+  Etapa 4; as 5 agregadas foram reconhecidas e nenhuma pergunta a recusar foi ao panorama. As 4
+  divergências foram perguntas marcadas como específicas que o roteador mandou ao panorama. Três
+  são visões gerais de um recorte sem assunto definido (P19, P22, P23), para as quais o panorama
+  é provavelmente a melhor resposta (a marcação da Etapa 4 usava o critério "pede frequência", mais
+  estreito). Numa releitura com o critério "visão do conjunto": 30 de 31.
+- **Limitação:** a P08 ("temas nas avaliações sobre entregas insatisfatórias") pede temas dentro de
+  um assunto; o panorama ainda não recorta por assunto e mostra todos os problemas.
