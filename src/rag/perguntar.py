@@ -1,12 +1,13 @@
-"""Etapas 3 e 5 — Pergunta ao sistema pelo terminal: resposta + evidências citadas + verificações.
+"""Etapas 3, 5 e 6 — Pergunta ao sistema pelo terminal: resposta + evidências citadas + verificações.
 
-Fluxo padrão (Etapa 5): reescrita da pergunta → busca densa → reranker → resposta.
+Fluxo padrão: roteador → (agregada) panorama de temas com contagens reais
+                       → (específica) reescrita → busca densa → reranker → resposta → correção.
 
 Exemplos (na raiz do projeto):
+    python -m src.rag.perguntar "Quais são os principais problemas relatados pelos clientes?"
     python -m src.rag.perguntar "O que os clientes relatam sobre atrasos na entrega?"
     python -m src.rag.perguntar "Quais problemas aparecem?" --categoria "cama mesa banho" --nota-max 2
-    python -m src.rag.perguntar "O que os clientes elogiam?" --uf RJ --de 20180101 --ate 20180630
-    python -m src.rag.perguntar "Pergunta" --sem-reescrita --sem-reranker   (linha de base)
+    python -m src.rag.perguntar "Pergunta" --sem-roteador --sem-reescrita --sem-reranker
 
 O modelo padrão é o LLM_MODELO do .env; use --modelo para trocar.
 """
@@ -65,6 +66,8 @@ def ler_argumentos() -> argparse.Namespace:
     p.add_argument("--k", type=int, default=20, help="quantas avaliações enviar ao LLM (padrão 20)")
     p.add_argument("--modelo", help="modelo do LLM (padrão: LLM_MODELO do .env)")
     p.add_argument("--modo", choices=MODOS, default="densa", help="tipo de busca (padrão: densa)")
+    p.add_argument("--sem-roteador", action="store_true",
+                   help="não classificar a pergunta (sempre a rota específica)")
     p.add_argument("--sem-reescrita", action="store_true", help="não reescrever a pergunta")
     p.add_argument("--sem-reranker", action="store_true", help="não reordenar com o reranker")
     p.add_argument("--prompt", choices=sorted(PROMPTS), default=VERSAO_PADRAO,
@@ -81,14 +84,16 @@ def main() -> None:
     buscador = Buscador()
     saida = responder(buscador, args.pergunta, filtros=filtros, k=args.k,
                       reescrever=not args.sem_reescrita, reranquear=not args.sem_reranker,
-                      modo=args.modo, modelo=args.modelo, versao_prompt=args.prompt)
-    evidencias, r = saida["evidencias"], saida["resultado"]
+                      modo=args.modo, modelo=args.modelo, versao_prompt=args.prompt,
+                      rotear=not args.sem_roteador)
+    evidencias, r, rota = saida["evidencias"], saida["resultado"], saida["rota"]
     if r is None:
         print("\nNenhuma avaliação com texto encontrada neste recorte. Tente filtros mais amplos.")
         return
 
     linha = "=" * 80
     print(f"\n{linha}\nPERGUNTA: {args.pergunta}")
+    print(f"ROTA: {rota['tipo']}" + (f" ({rota['grupo']})" if rota["grupo"] else ""))
     if saida["reescrita"]:
         print(textwrap.fill(f"REESCRITA: {saida['reescrita']}", 80, subsequent_indent="  "))
     print(f"{linha}\n\n{r['resposta']}\n")
@@ -100,22 +105,29 @@ def main() -> None:
     for ref, e in evidencias.set_index("ref").loc[validas].iterrows():
         data = str(e["data_compra"])
         nota_rerank = f" | reranker {e['score_rerank']:.3f}" if "score_rerank" in e else ""
+        tema = f" | tema: {e['tema_nome']}" if "tema_nome" in e else ""
         print(f"[{ref}] review_id {e['review_id']} | nota {e['nota']} | "
-              f"{e['categoria_principal']} | compra {data[:4]}-{data[4:6]} | {e['uf']}{nota_rerank}")
+              f"{e['categoria_principal']} | compra {data[:4]}-{data[4:6]} | {e['uf']}"
+              f"{nota_rerank}{tema}")
         print(textwrap.indent(textwrap.fill(e["texto"], 74), "      "))
 
     print(f"\n{linha}\nVERIFICAÇÕES AUTOMÁTICAS\n{linha}")
     print(f"  modelo: {r['modelo']} | prompt {r['versao_prompt']} | {r['segundos']} s | "
           f"tokens entrada/saída: {r['tokens_entrada']}/{r['tokens_saida']}")
-    print(f"  busca: {args.modo}{'' if args.sem_reescrita else ' + reescrita'}"
-          f"{'' if args.sem_reranker else ' + reranker'}")
+    if rota["tipo"] == "especifica":
+        print(f"  busca: {args.modo}{'' if args.sem_reescrita else ' + reescrita'}"
+              f"{'' if args.sem_reranker else ' + reranker'}")
+        print(f"  correção: {r.get('correcao', 'desligada')}")
     print(f"  recorte: {evidencias.attrs['documentos_no_filtro']:,} avaliações com texto | "
-          f"enviadas ao LLM: {len(evidencias)}")
+          f"evidências enviadas ao LLM: {len(evidencias)}")
     print(f"  recusou: {'sim' if r['recusou'] else 'não'}")
     print(f"  citações inválidas: {', '.join(r['citacoes_invalidas']) or 'nenhuma'}")
     print(f"  trechos não encontrados: {' | '.join(r['trechos_nao_encontrados']) or 'nenhum'}")
     print(f"  registro citado como relato: {' | '.join(r['registro_como_relato']) or 'nenhum'}")
     print(f"  termos de frequência: {', '.join(r['termos_frequencia']) or 'nenhum'}")
+    if "numeros_fora_do_panorama" in r:
+        print(f"  números fora do panorama: "
+              f"{', '.join(r['numeros_fora_do_panorama']) or 'nenhum'}")
 
 
 if __name__ == "__main__":
