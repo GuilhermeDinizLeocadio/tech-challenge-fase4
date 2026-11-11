@@ -967,3 +967,39 @@ avaliação e permite contar de verdade, em qualquer recorte.
 - **Limite de cota:** o limite diário do Groq conta as últimas 24 horas (e não o dia do
   calendário); o consumo intenso da véspera ainda contava. Uma pergunta falhou por limite e foi
   refeita depois, sem perda (os scripts retomam de onde pararam).
+
+
+
+  ## Etapa 8 — Interface (Streamlit)
+
+- **`app.py` na raiz do projeto:** `streamlit run app.py`.
+- **Sem lógica própria:** a interface só chama `pipeline.responder`, o mesmo fluxo avaliado nas
+  Etapas 5 a 7. Os números da avaliação valem para o que o usuário vê.
+- **Barra lateral:** recorte por categoria, UF, região, situação da entrega (registro), faixa de
+  nota e período (cada filtro só entra quando alterado, para a resposta não mencionar um recorte
+  que o usuário não pediu); configuração avançada para ligar e desligar roteador, reescrita,
+  reranker e correção, e escolher quantas avaliações enviar ao LLM.
+- **Resposta:** rota, tamanho do recorte, tempo total, aviso de recusa, a resposta e seções
+  expansíveis com o panorama calculado pelo código (nas agregadas), as avaliações citadas (com
+  metadados e tema), as verificações automáticas (✅/⚠️) e a reescrita usada na busca.
+- **Aba "Como o sistema foi avaliado":** linha de base x sistema final x perguntas novas, lida de
+  `resultados/tabela_comparativa.csv` (sem chamar nenhuma API).
+- **Carregamento único** (`st.cache_resource`): embedding, índices, reranker e panorama carregam
+  uma vez (~15 s); as perguntas seguintes usam a memória.
+- **Vigia de arquivos desligado** (`.streamlit/config.toml`): ele percorria todos os pacotes
+  carregados e gerava centenas de avisos sobre modelos de imagem do `transformers` que o projeto
+  não usa (exigiriam o `torchvision`). Instalar o pacote só para calar o aviso foi descartado.
+- **Testes manuais:** pergunta agregada (panorama, números conferidos, 3,7 s), pergunta
+  específica (citações, correção aplicada e reescrita, 8,5 s), fora do escopo (recusa com motivo e
+  sugestão) e recorte por categoria (cama, mesa e banho).
+- **Achado com o recorte:** em cama, mesa e banho, "entrega incompleta" (17,5%) praticamente empata
+  com o atraso (17,8%), e a baixa qualidade pesa 11,7% (7,1% na base inteira): a visão geral
+  esconderia que, nesta categoria, o problema é outro (produtos vendidos em várias peças).
+- **Tempos:** perguntas em sequência rápida batem no limite de tokens por minuto do Groq (uma
+  específica levou 22,9 s logo depois de uma agregada); com um intervalo entre perguntas, a rota
+  agregada leva ~3 a 4 s e a específica ~8 a 9 s.
+- **Limitações observadas:** a Interpretação é a parte menos controlada da resposta (hipóteses como
+  "falhas no centro de distribuição" ou "gestão de estoque" não relatadas pelos clientes); o
+  detector de frequência usa uma lista de palavras e não pega sinônimos como "a principal causa",
+  "vários", "muitos". O detector não foi alterado depois da avaliação final, para não mudar a régua
+  depois de medir.
