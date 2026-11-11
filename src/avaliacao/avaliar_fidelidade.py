@@ -1,14 +1,14 @@
-"""Etapas 4 e 5 — Avalia a fidelidade das respostas salvas: o juiz confere cada afirmação contra as
-avaliações que ela cita.
+"""Etapas 4 a 7 — Avalia a fidelidade das respostas salvas: o juiz confere cada afirmação contra
+as avaliações que ela cita.
 
 Para cada resposta que NÃO foi recusa, o juiz recebe a pergunta, o recorte, o MESMO contexto que
-o redator recebeu (inclusive o mesmo formato, v2 ou v3) e a resposta. Ele lista as afirmações
-factuais e dá um veredito a cada uma (sustentada, parcial ou não sustentada), além de avaliar a
-resposta como um todo. Os resultados são salvos assim que chegam; rodar de novo pula o que já foi
-avaliado.
+o redator recebeu (inclusive o mesmo formato: v2, v3/v4 ou, nas respostas agregadas da Etapa 6,
+o panorama de temas mais os exemplos) e a resposta. Ele lista as afirmações factuais e dá um
+veredito a cada uma (sustentada, parcial ou não sustentada), além de avaliar a resposta como um
+todo. Os resultados são salvos assim que chegam; rodar de novo pula o que já foi avaliado.
 
 Uso (na raiz do projeto), com uma ou mais configurações:
-    python -m src.avaliacao.avaliar_fidelidade reescrita_rerank_k20_prompt_v2 reescrita_rerank_k20_prompt_v3
+    python -m src.avaliacao.avaliar_fidelidade final
 """
 import json
 import sys
@@ -29,18 +29,22 @@ responde perguntas usando avaliações de clientes de um e-commerce brasileiro.
 
 Você recebe a pergunta, o recorte consultado, o CONTEXTO (avaliações numeradas [R#]; o cabeçalho
 de cada uma é o REGISTRO do sistema e o texto entre aspas é o RELATO do cliente) e a RESPOSTA.
+Quando o contexto trouxer um PANORAMA, ele contém contagens reais de avaliações por tema,
+fornecidas ao sistema: afirmações que reproduzem esses números são sustentadas pelo panorama,
+mesmo sem citação [R#].
 
 Tarefa:
 1. Liste as afirmações factuais das seções "Resposta" e "O que os clientes relatam". Uma afirmação
    é uma ideia sobre o que os clientes relatam ou sobre o registro. Ignore a seção "Limitações",
    frases de formato e frases que apenas descrevem o recorte.
-2. Para cada afirmação, verifique SOMENTE as avaliações citadas nela e dê um veredito:
+2. Para cada afirmação, verifique SOMENTE as avaliações citadas nela (ou o panorama, no caso de
+   números de temas) e dê um veredito:
    - "sustentada": as avaliações citadas dizem isso (paráfrase fiel é aceitável);
    - "parcial": parte é sustentada, mas há exagero, generalização, causa não relatada pelos
      clientes ou detalhe a mais; também é "parcial" quando um dado do CABEÇALHO aparece entre
      aspas como se fosse fala do cliente;
    - "nao_sustentada": as avaliações citadas não dizem isso, dizem o contrário, ou a afirmação
-     não tem citação.
+     não tem citação nem vem do panorama.
 3. "fatos_novos_na_interpretacao": true se a seção "Interpretação" introduz fatos, números ou
    causas que não aparecem nas afirmações citadas; false caso contrário.
 4. "responde_a_pergunta": nota de 1 a 5 (5 = responde diretamente ao que foi perguntado;
@@ -64,7 +68,14 @@ def ler_jsonl(arquivo: Path) -> list[dict]:
 
 
 def montar_mensagem(r: dict) -> str:
-    contexto = formatar_contexto(pd.DataFrame(r["evidencias"]), r.get("versao_prompt", "v2"))
+    """O mesmo contexto que o redator recebeu, no mesmo formato."""
+    if r.get("modo") == "agregada":
+        from src.temas.resposta_agregada import _bloco_exemplos, _bloco_panorama
+        contexto = ("PANORAMA (contagem real de todas as avaliações com texto do recorte):\n"
+                    + "\n\n".join(_bloco_panorama(p) for p in r["panorama"])
+                    + "\n\nEXEMPLOS:\n" + _bloco_exemplos(pd.DataFrame(r["evidencias"])))
+    else:
+        contexto = formatar_contexto(pd.DataFrame(r["evidencias"]), r.get("versao_prompt", "v2"))
     return (f"PERGUNTA: {r['pergunta']}\n"
             f"RECORTE: {descrever_filtros(r.get('filtros'))} "
             f"({r['documentos_no_filtro']:,} avaliações com texto)\n\n"
@@ -133,7 +144,8 @@ def auditar(config: str, juiz: Juiz | None) -> Juiz | None:
         for r in pendentes:
             registro = {"id": r["id"], "modelo": r["modelo"], "tipo": r["tipo"],
                         "esperado": r["esperado"], "agregada": r["agregada"],
-                        "config": config, "juiz": juiz.modelo}
+                        "modo": r.get("modo", "especifica"), "config": config,
+                        "juiz": juiz.modelo}
             try:
                 avaliacao = None
                 for tentativa in range(2):  # uma nova tentativa se o formato vier inválido
