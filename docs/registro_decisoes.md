@@ -905,3 +905,65 @@ avaliação e permite contar de verdade, em qualquer recorte.
   estreito). Numa releitura com o critério "visão do conjunto": 30 de 31.
 - **Limitação:** a P08 ("temas nas avaliações sobre entregas insatisfatórias") pede temas dentro de
   um assunto; o panorama ainda não recorta por assunto e mostra todos os problemas.
+
+
+
+  ## Etapa 7 — Avaliação final
+
+### 7a: o sistema final nas 31 perguntas de teste (`src/avaliacao/gerar_final.py`)
+- **Sistema final:** roteador + rota agregada (panorama de temas) ou rota específica (busca densa +
+  reescrita + reranker + prompt v4 + correção v2).
+- **Rotas:** as decisões do roteador salvas na Etapa 6 (9 agregadas e 22 específicas).
+- **Reaproveitamento honesto:** a rota específica é exatamente a configuração
+  `reescrita_rerank_k20_prompt_v4_corrigida`, já gerada e auditada; suas respostas e auditorias
+  foram reaproveitadas (gerar de novo só gastaria cota e traria variação aleatória). As 9 respostas
+  agregadas foram geradas e auditadas na Etapa 7.
+- **Juiz com o panorama:** nas respostas agregadas, o juiz passa a receber o mesmo contexto do
+  redator (panorama + exemplos) e uma regra: números que reproduzem o panorama são sustentados por
+  ele. Sem isso, os números reais seriam marcados como "não sustentados".
+- **Relatório por rota:** contagens e termos de frequência valem só para a rota específica; na
+  agregada, vale a verificação dos números fora do panorama.
+
+| Medida (Qwen) | Linha de base (Etapa 4) | Sistema final |
+|---|---|---|
+| Comportamento correto | 100% | 100% |
+| Perguntas sem evidência recusadas | 100% | 100% |
+| Fidelidade ajustada | 94,7% | **97,4%** (agregadas 98,6%; específicas 96,3%) |
+| Não sustentadas | 2,0% | 0% |
+| Registro citado como relato | 1 | 0 |
+| Respostas com termos de frequência / contagem | 13 / 15 | 0 / 0 |
+| Números fora do panorama (9 agregadas) | — | 0 |
+| Interpretação com fatos novos | 2 | 0 |
+
+- **Ressalvas:**
+  - "Responde à pergunta" ficou em 5,0 em todas as configurações, inclusive na linha de base, em
+    que as agregadas eram mal respondidas: o juiz é generoso nesse critério, e a métrica não
+    distingue as configurações. A diferença real nas agregadas aparece melhor comparando as
+    respostas lado a lado.
+  - A fidelidade das específicas no sistema final (96,3%) é de um subconjunto (15 respostas não
+    recusadas), diferente do conjunto da configuração `v4_corrigida` inteira (24).
+  - Tempos das agregadas acima de 10 s foram esperas do limite de tokens por minuto; o tempo real
+    é de 2 a 4 s.
+
+### 7b: teste de generalização com perguntas novas (`src/avaliacao/avaliar_holdout.py`)
+- **Por quê:** os prompts das Etapas 5 e 6 foram ajustados olhando as respostas das 31 perguntas.
+  Para medir se o sistema ficou "decorado" na prova, 8 perguntas novas foram escritas depois de
+  todo o desenvolvimento, congeladas antes de rodar e nunca usadas para ajustar nada
+  (`data/avaliacao/perguntas_holdout.json`).
+- **Tudo ao vivo**, como na interface: roteador, reescrita, busca, reranker, resposta e correção
+  (ou panorama).
+- Inclui uma armadilha temporal: "O que os clientes dizem sobre pagar com Pix?" (o Pix é de 2020;
+  a base vai até 2018). Há avaliações sobre pagamento, mas nenhuma sobre Pix.
+
+| Medida | Prova (31) | Perguntas novas (8) |
+|---|---|---|
+| Comportamento correto | 100% | 100% (8/8), incluindo a recusa do Pix |
+| Rota como esperado | 87% | 100% (8/8) |
+| Fidelidade ajustada | 97,4% | 100% (41/41 afirmações) |
+| Termos de frequência / contagens / números fora do panorama | 0 / 0 / 0 | 0 / 0 / 0 |
+
+- **Conclusão:** o desempenho nas perguntas novas não caiu em relação à prova. Com 8 perguntas, o
+  resultado mostra ausência de queda, não perfeição.
+- **Limite de cota:** o limite diário do Groq conta as últimas 24 horas (e não o dia do
+  calendário); o consumo intenso da véspera ainda contava. Uma pergunta falhou por limite e foi
+  refeita depois, sem perda (os scripts retomam de onde pararam).
