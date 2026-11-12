@@ -1003,3 +1003,35 @@ avaliação e permite contar de verdade, em qualquer recorte.
   detector de frequência usa uma lista de palavras e não pega sinônimos como "a principal causa",
   "vários", "muitos". O detector não foi alterado depois da avaliação final, para não mudar a régua
   depois de medir.
+
+
+
+  
+## Etapa 9 — README
+
+- **Organizado pelos entregáveis do enunciado:** problema e solução, arquitetura (com tecnologias e
+  bibliotecas), preparação da base, pipeline RAG passo a passo, metadados, como rodar, exemplos,
+  avaliação, decisões, limitações, estrutura e licença. O README resume; este registro detalha, e
+  cada número do README foi conferido com ele.
+- **Conferência contra o enunciado:** a 1ª versão estava correta nos números, mas, comparada item a
+  item com a lista de entregáveis, faltavam a preparação da base, exemplos de respostas e as
+  bibliotecas; e estavam fracos a construção do contexto e a justificativa dos metadados (desafio
+  adicional). Os cinco pontos foram incluídos. Lição: revisar a entrega contra o enunciado, e não
+  só contra o próprio trabalho.
+- **Exemplos de respostas reais** do sistema final, copiados da interface: visão do conjunto (base
+  inteira e cama, mesa e banho), assunto específico (Correios) e recusa (faturamento).
+- **Limitação exposta de propósito:** no exemplo dos Correios, "a principal causa" escapou do
+  detector de frequência (lista de palavras). O exemplo foi mantido e ligado às limitações, em vez
+  de trocado por um exemplo "limpo".
+- **Imagem da interface** (`docs/img/interface.png`): o teste de cama, mesa e banho mostra numa tela
+  só o filtro aplicado, a rota escolhida pelo roteador e a resposta com contagens reais. A recusa
+  ficou para o vídeo, porque como capa passaria a ideia de "não funcionou".
+- **Correção:** "Atraso na entrega tem 82,5% de entregas atrasadas" → "atrasadas ou não entregues",
+  como registrado na Etapa 6.
+- **Licença:** a atribuição CC BY-NC-SA 4.0 do README anterior (link da licença e redistribuição dos
+  6 CSVs para fins acadêmicos e não comerciais) foi mantida na seção de dados.
+- **Aviso de reprodutibilidade:** o agrupamento dos temas é determinístico (semente fixa), mas os
+  nomes e os macrotemas vêm de um LLM e podem variar ao reconstruir; o catálogo usado na avaliação
+  está em `resultados/temas.json`.
+- **Entregáveis:** pelo enunciado, o repositório público e o vídeo de até 7 minutos; não há
+  documento em PDF obrigatório (só a comprovação da trilha Databricks, que é opcional).
