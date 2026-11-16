@@ -9,7 +9,7 @@ afirmação, **separando o relato do cliente do registro do sistema** e **recusa
 não tem evidência. Perguntas sobre o conjunto ("quais são os principais problemas?") são
 respondidas com **contagens reais por tema**, e não com uma amostra.
 
-> 🎥 **Vídeo de apresentação:** _(link)_
+> 🎥 **Vídeo de apresentação:** enviado junto com a entrega, no arquivo `video_apresentacao_fase4.mp4`.
 
 ![Interface](docs/img/interface.png)
 
@@ -309,8 +309,8 @@ Os metadados entram como **filtros aplicados antes da busca**, e não dentro do 
   relatam sobre o produto?" com categoria cama mesa banho e nota ≤ 2 trouxe só avaliações da
   categoria, todas nota 1.
 - **O recorte muda a conclusão:** na base inteira, o atraso lidera os problemas (22,5%); em cama,
-  mesa e banho, "entrega incompleta" (17,5%) empata com o atraso (17,8%), e a baixa qualidade pesa
-  quase o dobro da média (exemplo 2 da seção 7).
+  mesa e banho, "entrega incompleta" (17,5%) empata com o atraso (17,8%), e a baixa qualidade sobe
+  de 7,1% para 11,7% (exemplo 2 da seção 7).
 - **O recorte é informado ao modelo e declarado na resposta**, e as contagens do panorama respeitam
   os mesmos filtros.
 
@@ -350,6 +350,8 @@ python -m src.temas.consolidar_temas           # <1 min
 # 6. Interface (a 1ª pergunta baixa o reranker, ~2,3 GB)
 streamlit run app.py                           # abre em http://localhost:8501
 ```
+
+Se o navegador não abrir sozinho, acesse `http://localhost:8501`.
 
 No Linux/macOS, troque a ativação do ambiente por `source .venv/bin/activate` e o `Copy-Item`
 por `cp`.
@@ -565,7 +567,7 @@ O diário completo, com cada decisão e o número que a justificou, está em
 - **A entrega aparece dos dois lados:** é o maior elogio (42% das avaliações positivas) e, somando
   atraso e não entrega, a maior reclamação (42% das negativas).
 - **O recorte muda a conclusão:** em cama, mesa e banho, "entrega incompleta" (17,5%) empata com o
-  atraso (17,8%), e a baixa qualidade pesa quase o dobro da média.
+  atraso (17,8%), e a baixa qualidade sobe de 7,1% para 11,7%.
 - **Empresas anonimizadas:** a Olist trocou nomes de lojas e parceiros por casas de *Game of
   Thrones* ("lojas lannister"), citadas em 4,6% dos textos. O prompt avisa o modelo, e o sistema
   não tenta identificar as empresas reais.
