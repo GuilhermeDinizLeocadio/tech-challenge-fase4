@@ -1,0 +1,54 @@
+[
+  {
+    "tipo": "específica",
+    "modelo": "openai/gpt-oss-120b",
+    "pergunta": "O que os clientes relatam sobre produtos que chegaram quebrados?",
+    "filtros": null,
+    "resposta": "## Resposta\nOs clientes relatam que produtos chegam quebrados principalmente por embalagens inadequadas ou frágeis, apontando falta de proteção e sinalização de fragilidade. Em alguns casos, o dano é atribuído ao transporte ou ao carteiro, mas a maioria menciona a própria embalagem como causa. Quando o problema ocorre, o atendimento costuma ser elogiado por resolver rapidamente, embora alguns clientes ainda expressem insatisfação e solicitem troca ou devolução.\n\n## O que os clientes relatam\n- **Embalagem insuficiente ou frágil:** “Produto mal embalado. Produto chegou quebrado” [R3]; “cuba chegou aqui toda quebrada, numa cx de papelao fininha sem proteçao” [R12]; “caixa veio totalmente deformada/estragada” [R10].\n- **Ausência de aviso de fragilidade:** “não tinha especificação na caixa falando q era produto frágil” [R16]; “sem sinalização de produto frágil” implícito em R16.\n- **Dano atribuído ao transporte ou carteiro:** “não sei se o dano ocorreu nos Correios ou se me enviado assim” [R4]; “não foi entregue por transport e sim pelo carteiro que nem sabia que era algo frágil” [R12].\n- **Atendimento eficaz após reclamação:** “fui super bem atendida, imediatamente resolveram tudo e mandaram outro novinho” [R2]; “enviaram outro rapidamente, em perfeito estado” [R1].\n- **Insatisfação e solicitação de troca ou devolução:** “não tô solicitando outro produto nem a devolução” [R4]; “Solicito troca urgente por um produto em boas condições” [R13]; “quero meu dinheiro de volta” [R15].\n\n## Interpretação\nIsso sugere que a principal causa percebida pelos clientes é a embalagem inadequada, especialmente a falta de proteção e sinalização de fragilidade, o que leva a danos durante o transporte. Embora o suporte ao cliente seja frequentemente elogiado por resolver o problema, a experiência inicial de receber produtos quebrados gera insatisfação e pedidos de troca ou reembolso.\n\n## Limitações\nA resposta se baseia em 20 avaliações recuperadas de um total de 42.251 avaliações com texto, e não mede a frequência dos relatos na base completa."
+  },
+  {
+    "tipo": "específica",
+    "modelo": "qwen/qwen3.8-27b",
+    "pergunta": "O que os clientes relatam sobre produtos que chegaram quebrados?",
+    "filtros": null,
+    "resposta": "## Resposta\nNo recorte de todas as avaliações com texto, os clientes relatam que produtos chegaram quebrados, frequentemente associando o dano a falhas na embalagem ou no transporte. Diversos relatos mencionam caixas amassadas, ausência de proteção adequada ou falta de identificação de \"frágil\" [R3, R9, R12, R16]. Alguns clientes também relatam que, após a reclamação, a empresa enviou substituições rapidamente [R1, R2].\n\n## O que os clientes relatam\n- **Embalagem inadequada:** Clientes citam embalagens frágeis ou ausentes, como \"numa cx de papelao fininha sem proteçao\" [R12] e \"papel bolha marrom lotado de sombra\" [R15].\n- **Falta de identificação de frágil:** Há relatos de que os pacotes não tinham aviso de frágil, como \"sem aviso de frágil, num papel pardo\" [R9] e \"não tinha especificação na caixa falando q era produto frágil\" [R16].\n- **Dano no transporte:** Alguns clientes atribuem a quebra ao transporte, citando \"Pacote amassado nas pontas, peças quebradas\" [R9] ou \"caixa veio totalmente deformada/estragada\" [R10].\n- **Resolução pós-venda:** Relatos de que a empresa enviou produtos novos após a reclamação, como \"enviaram outro rapidamente, em perfeito estado\" [R1] e \"imediatamente resolveram tudo e mandaram outro novinho\" [R2].\n- **Dúvida sobre a origem do dano:** Um cliente expressa incerteza sobre se o dano ocorreu no transporte ou na origem: \"Não sei se o dano ocorreu nos Correios ou se me enviado assim\" [R4].\n\n## Interpretação\nIsso sugere que a percepção de quebra está fortemente ligada à percepção de falha logística na proteção do item, mais do que à qualidade intrínseca do produto em si, embora alguns clientes também mencionem \"material não é bom\" [R3]. A rápida resolução em alguns casos parece mitigar a insatisfação inicial, levando a notas altas mesmo após o incidente [R1, R2].\n\n## Limitações\nA resposta usa 20 avaliações recuperadas de um recorte de 42.251 avaliações com texto e não mede frequências na base."
+  },
+  {
+    "tipo": "com filtro",
+    "modelo": "openai/gpt-oss-120b",
+    "pergunta": "Quais problemas aparecem nas avaliações?",
+    "filtros": {
+      "categoria_principal": "cama mesa banho",
+      "nota": {
+        "$lte": 2
+      }
+    },
+    "resposta": "## Resposta\nNo recorte de avaliações de cama mesa banho com nota ≤ 2, os principais problemas apontados são: produto com cor ou modelo diferente do anunciado [R1, R2, R12, R18]; baixa qualidade ou itens quebrados [R3, R4, R19]; falta de itens ou entrega incompleta [R5, R6, R17, R20]; atrasos e não‑entregas sem comunicação [R7, R8, R11, R16]; e dificuldades no acompanhamento do pedido pelo site [R10].\n\n## O que os clientes relatam\n- **Cor/modelo divergente:** “as cores vieram todas erradas” [R1]; “coloca uma foto recebe outro produto” [R2]; “recebi modelos diferentes… diferente do modelo mostrado no site” [R12]; “na foto é mais bonito… costuras engrugidas” [R18].\n- **Qualidade ruim ou produto danificado:** “baixa qualidade… péssima qualidade” [R3]; “assessório veio quebrado” [R4]; “pano ruim… não é o que apresenta no site” [R19].\n- **Falta de itens/entrega incompleta:** “Só entregou um item faltando os 2 outros” [R5]; “Veio faltando produto… só veio 1” [R6]; “faltando 02 panos de prato… paguei por 07” [R17]; “Só recebi um… não rastrear os 2 produtos” [R20].\n- **Atrasos e não‑entregas sem informação:** “não chegou… imprevisto dos correios” [R7]; “produto não foi entregue… estou aguardando reembolso” [R8]; “não recebi… ainda tem muitos produtos que comprei” [R11]; “já se passaram mais de 30 dias… sem nenhum contato” [R16].\n- **Problemas no acompanhamento pelo site:** “não pude acompanhar meu pedido pelo site… não atualiza” [R10].\n\n## Interpretação\nEssas reclamações sugerem que falhas de precisão nas informações de produto (cor, modelo, foto) e de controle de estoque geram entregas equivocadas, enquanto a baixa qualidade percebida e a ausência de itens aumentam a insatisfação. Além disso, atrasos e falta de comunicação sobre o status da entrega, bem como um site que não rastreia pedidos, agravam a percepção negativa.\n\n## Limitações\nA resposta se baseia em 20 avaliações recuperadas de um recorte de 1 144 avaliações com texto e não mede frequências na base."
+  },
+  {
+    "tipo": "com filtro",
+    "modelo": "qwen/qwen3.8-27b",
+    "pergunta": "Quais problemas aparecem nas avaliações?",
+    "filtros": {
+      "categoria_principal": "cama mesa banho",
+      "nota": {
+        "$lte": 2
+      }
+    },
+    "resposta": "## Resposta\nAs avaliações recuperadas, referentes ao recorte de categoria \"cama mesa banho\" com nota ≤ 2, apontam problemas recorrentes de divergência entre o produto anunciado e o recebido, baixa qualidade dos itens e falhas na entrega, como itens faltantes ou não entregues. Clientes relatam também dificuldades no pós-venda, como a impossibilidade de rastreamento e a lentidão ou ausência de contato da loja para resolver pendências.\n\n## O que os clientes relatam\n- **Divergência entre foto e produto:** Clientes afirmam que o item recebido não corresponde à imagem do site, incluindo cores erradas e modelos diferentes [R1, R2, R12, R18]. Um cliente cita: \"coloca uma foto recebe outro produto\" [R2].\n- **Baixa qualidade do material:** Há relatos de produtos com \"péssima qualidade\", tecido fino e costuras ruins, não condizentes com a expectativa [R3, R4, R18, R19].\n- **Itens faltantes ou não entregues:** Vários clientes relataram receber apenas parte do pedido ou nada, com registros de atraso ou não entrega [R5, R6, R7, R11, R16, R17, R20]. Um cliente afirma: \"Comprei 2 cortinas e só veio 1\" [R6].\n- **Falhas no rastreamento e comunicação:** Clientes não conseguem acompanhar o pedido no site e relatam falta de contato da loja após o prazo, gerando incerteza sobre o status [R10, R16, R20].\n- **Dificuldade no pós-venda e trocas:** Relatos de dor de cabeça para realizar trocas, cancelamentos negados ou demora excessiva para resolução de problemas [R1, R13, R14, R19].\n\n## Interpretação\nIsso sugere que a experiência de compra é comprometida por uma lacuna entre a curadoria de conteúdo (fotos/descrições) e a realidade do estoque/qualidade, somada a fragilidades logísticas que impedem o cliente de ter visibilidade sobre o pedido. A ausência de comunicação proativa da loja em situações de falha agrava a percepção de descaso.\n\n## Limitações\nA resposta usa 20 avaliações recuperadas de um recorte de 1.144 avaliações com texto e não mede frequências na base."
+  },
+  {
+    "tipo": "fora do escopo",
+    "modelo": "openai/gpt-oss-120b",
+    "pergunta": "Qual foi o faturamento da Olist em 2018?",
+    "filtros": null,
+    "resposta": "## Resposta\nAs avaliações recuperadas não são suficientes para responder a esta pergunta.  \n**Motivo:** Nenhuma das avaliações traz informações sobre faturamento ou dados financeiros da Olist.  \n**O que esta base consegue responder:** Perguntas sobre experiências de compra dos clientes, como produto, entrega, atendimento e loja."
+  },
+  {
+    "tipo": "fora do escopo",
+    "modelo": "qwen/qwen3.8-27b",
+    "pergunta": "Qual foi o faturamento da Olist em 2018?",
+    "filtros": null,
+    "resposta": "## Resposta\nAs avaliações recuperadas não são suficientes para responder a esta pergunta.\n**Motivo:** O contexto contém apenas relatos de experiência de clientes sobre produtos, entrega e atendimento, não incluindo dados financeiros corporativos como faturamento.\n**O que esta base consegue responder:** Perguntas sobre a satisfação dos clientes com a qualidade dos produtos, a pontualidade da entrega e a experiência de compra na loja."
+  }
+]

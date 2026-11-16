@@ -1,0 +1,21 @@
+[
+  {"id": "H01", "pergunta": "O que os clientes relatam sobre a montagem de móveis?",
+   "tipo": "especifica", "esperado": "responder", "agregada": false},
+  {"id": "H02", "pergunta": "Como os clientes avaliam os produtos de informática?",
+   "tipo": "filtro", "esperado": "responder", "agregada": true,
+   "filtros": {"categoria_principal": "informatica acessorios"}},
+  {"id": "H03", "pergunta": "Há relatos de cobrança indevida ou problemas com o pagamento?",
+   "tipo": "especifica", "esperado": "responder", "agregada": false},
+  {"id": "H04", "pergunta": "Quais são os principais problemas relatados por clientes do Rio de Janeiro?",
+   "tipo": "filtro", "esperado": "responder", "agregada": true,
+   "filtros": {"uf": "RJ"}},
+  {"id": "H05", "pergunta": "O que os clientes mais elogiam nos produtos de cama, mesa e banho?",
+   "tipo": "filtro", "esperado": "responder", "agregada": true,
+   "filtros": {"categoria_principal": "cama mesa banho"}},
+  {"id": "H06", "pergunta": "O que os clientes dizem sobre pagar com Pix?",
+   "tipo": "sem_evidencia", "esperado": "recusar", "agregada": false},
+  {"id": "H07", "pergunta": "Quantos funcionários a Olist tem?",
+   "tipo": "fora_escopo", "esperado": "recusar", "agregada": false},
+  {"id": "H08", "pergunta": "O que os clientes comentam sobre o tamanho de roupas e calçados?",
+   "tipo": "especifica", "esperado": "responder", "agregada": false}
+]

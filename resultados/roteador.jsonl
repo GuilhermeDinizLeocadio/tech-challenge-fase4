@@ -1,0 +1,31 @@
+{"id": "P01", "pergunta": "Quais são os principais problemas relatados pelos clientes em suas avaliações?", "tipo_pergunta": "enunciado", "agregada_esperada": true, "rota": "agregada", "grupo": "problema"}
+{"id": "P02", "pergunta": "O que os clientes relatam sobre problemas relacionados à entrega?", "tipo_pergunta": "enunciado", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P03", "pergunta": "Quais aspectos da experiência de compra são mais elogiados pelos clientes?", "tipo_pergunta": "enunciado", "agregada_esperada": true, "rota": "agregada", "grupo": "elogio"}
+{"id": "P04", "pergunta": "Quais padrões podem ser identificados nas avaliações de clientes insatisfeitos?", "tipo_pergunta": "enunciado", "agregada_esperada": true, "rota": "agregada", "grupo": "problema"}
+{"id": "P05", "pergunta": "Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega?", "tipo_pergunta": "enunciado", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P06", "pergunta": "Quais são os principais problemas relatados nas avaliações com nota baixa?", "tipo_pergunta": "enunciado", "agregada_esperada": true, "rota": "agregada", "grupo": "problema"}
+{"id": "P07", "pergunta": "O que os clientes mais elogiam nos produtos desta categoria?", "tipo_pergunta": "enunciado", "agregada_esperada": true, "rota": "agregada", "grupo": "elogio"}
+{"id": "P08", "pergunta": "Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias?", "tipo_pergunta": "enunciado", "agregada_esperada": false, "rota": "agregada", "grupo": "problema"}
+{"id": "P09", "pergunta": "O que os clientes relatam sobre produtos que chegaram quebrados ou danificados?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P10", "pergunta": "Há relatos de produtos diferentes do que foi anunciado no site?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P11", "pergunta": "O que os clientes dizem sobre pedidos que chegaram com itens faltando?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P12", "pergunta": "Como os clientes descrevem a embalagem dos produtos recebidos?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P13", "pergunta": "O que os clientes relatam sobre o atendimento ao tentar resolver um problema?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P14", "pergunta": "Há reclamações de pedidos que aparecem como entregues, mas que o cliente não recebeu?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P15", "pergunta": "O que os clientes relatam sobre os Correios?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P16", "pergunta": "O que os clientes comentam quando o produto chega antes do prazo previsto?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P17", "pergunta": "Há relatos de dificuldade para trocar ou devolver produtos?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P18", "pergunta": "O que os clientes falam sobre a loja Lannister?", "tipo_pergunta": "especifica", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P19", "pergunta": "Quais problemas os clientes relatam?", "tipo_pergunta": "filtro", "agregada_esperada": false, "rota": "agregada", "grupo": "problema"}
+{"id": "P20", "pergunta": "O que os clientes relatam sobre o atraso na entrega?", "tipo_pergunta": "filtro", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P21", "pergunta": "Como os clientes avaliam a experiência de entrega?", "tipo_pergunta": "filtro", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P22", "pergunta": "O que os clientes relatam sobre as compras feitas neste período?", "tipo_pergunta": "filtro", "agregada_esperada": false, "rota": "agregada", "grupo": "ambos"}
+{"id": "P23", "pergunta": "O que os clientes elogiam?", "tipo_pergunta": "filtro", "agregada_esperada": false, "rota": "agregada", "grupo": "elogio"}
+{"id": "P24", "pergunta": "Qual foi o faturamento da Olist em 2018?", "tipo_pergunta": "fora_escopo", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P25", "pergunta": "Qual é o melhor celular para comprar em 2026?", "tipo_pergunta": "fora_escopo", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P26", "pergunta": "Como configurar um roteador de internet sem fio?", "tipo_pergunta": "fora_escopo", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P27", "pergunta": "Qual a previsão do tempo para São Paulo amanhã?", "tipo_pergunta": "fora_escopo", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P28", "pergunta": "O que os clientes dizem sobre pagar as compras com criptomoedas?", "tipo_pergunta": "sem_evidencia", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P29", "pergunta": "O que os clientes relatam sobre a entrega feita por drones?", "tipo_pergunta": "sem_evidencia", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P30", "pergunta": "Como os clientes avaliam o provador virtual de roupas em realidade aumentada?", "tipo_pergunta": "sem_evidencia", "agregada_esperada": false, "rota": "especifica", "grupo": null}
+{"id": "P31", "pergunta": "Quais problemas os clientes relatam sobre a entrega?", "tipo_pergunta": "evidencia_escassa", "agregada_esperada": false, "rota": "especifica", "grupo": null}

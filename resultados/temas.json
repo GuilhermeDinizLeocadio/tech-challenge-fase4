@@ -1,0 +1,1004 @@
+{
+  "k_por_grupo": 20,
+  "semente": 42,
+  "temas": [
+    {
+      "id": "P01",
+      "grupo": "problema",
+      "nome": "Baixa qualidade do produto",
+      "descricao": "Os clientes relatam insatisfação com a qualidade inferior, fragilidade dos materiais e problemas no acabamento dos produtos recebidos.",
+      "coerente": true,
+      "n_avaliacoes": 1025,
+      "pct_do_grupo": 7.1,
+      "n_textos_distintos": 1025,
+      "nota_media": 2.14,
+      "pct_entrega_com_problema": 4.6,
+      "exemplos": [
+        "não recomendo. pelo valor pago a qualidade foi bem inferior, eu não compraria novamente",
+        "Ruim. Parecia um produto de melhor qualidade",
+        "qualidade. A qualidade da tinta não é boa, A cor laranja, por exemplo, saiu marrom. Não gostei",
+        "MAIS OU MENOS. produto de qualidade muito ruim nao recomendaria esse produto",
+        "Qualidade do produto. A qualidade do produto deixa a desejar, muito frágil."
+      ],
+      "macrotema": "MP05"
+    },
+    {
+      "id": "P02",
+      "grupo": "problema",
+      "nome": "Problemas na entrega e atendimento",
+      "descricao": "Os clientes relatam não terem recebido os produtos, falta de atendimento e falhas na comunicação da loja.",
+      "coerente": false,
+      "n_avaliacoes": 989,
+      "pct_do_grupo": 6.8,
+      "n_textos_distintos": 985,
+      "nota_media": 1.18,
+      "pct_entrega_com_problema": 37.6,
+      "exemplos": [
+        "Péssimo negócio. Comprei e até hj não me deram nenhuma satisfação. Apenas não entregaram o produto. Absurdo",
+        "Péssima e desonesta. Me entregaram um produto diferente do que eu queria, com cor e tamanho diferente. Estou muito insatisfeita e não comprarei mais !!!!!!!!!!!!!!!",
+        "não recomendo. Produto entregue errado, comprei um produto recebi outro totalmente diferente.",
+        "Produto ainda não foi entregue, difícil acesso para reclamações!! Não recomendo para ninguém E o correio também é uma bosta...",
+        "Eles não entrega Péssima loja Não recomendo Quero meu dinheiro de volta"
+      ],
+      "macrotema": "MP07"
+    },
+    {
+      "id": "P03",
+      "grupo": "problema",
+      "nome": "Entrega incompleta de produtos",
+      "descricao": "Os clientes relatam que receberam apenas parte dos itens comprados e enfrentam dificuldades para obter suporte ou o envio do restante do pedido.",
+      "coerente": true,
+      "n_avaliacoes": 962,
+      "pct_do_grupo": 6.7,
+      "n_textos_distintos": 962,
+      "nota_media": 1.52,
+      "pct_entrega_com_problema": 5.8,
+      "exemplos": [
+        "Estou no aguardo,pois, foi entregue apenas uma unidade e a compra foram de duas unidades...já mandei email e aguardo uma resposta.",
+        "comprei 3 produtos e vieram apenas 2. estou tentando entrar em contato a dias e não consigo. quando sera entregue o outro produto?",
+        "Conforme já informado faltam 2 produtos que não foram entregues. Não recebi os produtos, de 3 veio somente 1.",
+        "Mandei dois emails questionando pq recebi somente um produto dos 3 que adquiri. Estou aguardando retorno.",
+        "Comprei 2 produtos e recebi um só ,por enquantoestá deixando a deseja disseram que entregaram o outro hoje mas não entregaram estou aguardando"
+      ],
+      "macrotema": "MP04"
+    },
+    {
+      "id": "P04",
+      "grupo": "problema",
+      "nome": "Produto incorreto ou com defeito",
+      "descricao": "Os clientes relatam que receberam produtos errados, danificados ou com defeito, além de enfrentarem dificuldades para realizar a troca ou obter suporte.",
+      "coerente": true,
+      "n_avaliacoes": 951,
+      "pct_do_grupo": 6.6,
+      "n_textos_distintos": 951,
+      "nota_media": 1.45,
+      "pct_entrega_com_problema": 6.9,
+      "exemplos": [
+        "eu recebi o produto mas nao o que eu comprei e sim o produto totalmente errado muito triste",
+        "obs. tenho um outro produto que comprei com vcs é vai fazer um mês que recebe o produto com defeito e até hoje não fizeram a troca do produto",
+        "FOI APRESENTADO UM PRODUTO NO ATO DA COMPRA E FOI ENTREGUE OUTRO, UM TOTAL DESCASO TANTO DA PARTE DO FORNECEDOR QUANDO DA lannister QUANDO TENTEI FAZER A DEVOLUÇÃO DO PRODUTO",
+        "O produto veio com defeito...já solicitei a troca mas não tive retorno..",
+        "Produto errado. Entrega do produto diferente do solicitado Aguardo orientação para a troca"
+      ],
+      "macrotema": "MP03"
+    },
+    {
+      "id": "P05",
+      "grupo": "problema",
+      "nome": "Atraso na entrega",
+      "descricao": "Os clientes relatam que os produtos não foram entregues dentro do prazo estabelecido, além da falta de suporte ou satisfação por parte da empresa.",
+      "coerente": true,
+      "n_avaliacoes": 938,
+      "pct_do_grupo": 6.5,
+      "n_textos_distintos": 938,
+      "nota_media": 1.31,
+      "pct_entrega_com_problema": 82.5,
+      "exemplos": [
+        "Não cumpriram o prazo de entrega..que aliás já é muito demorado, faz mais de 15 dias q efetuei a compra e até agora nada...",
+        "Não recebi o meu produto. Eu, já paguei e até o momento não recebi o produto, estou aguardando, disseram que chegaria até 26/04/18 , mas até o momento nada da entrega.",
+        "Até agora esperando chegar e nada solicito um esclarecimento e resolução o prazo de entrega expirou preciso do produto urgente",
+        "Meu pedido foi depositado dia 27/11 e já é dia 28/11 e não o recebi. Nem mesmo uma explicação pela demora na entrega. Ainda estou aguardando.",
+        "O prazo para entrega do produto era dia 21//3, hoje é 26/03 e ainda não chegou. Já enviei mensagem para a empresa para saber o que está ocorrendo, mas eles não me responderam. Não recomendo"
+      ],
+      "macrotema": "MP01"
+    },
+    {
+      "id": "P06",
+      "grupo": "problema",
+      "nome": "Problemas com entrega e Correios",
+      "descricao": "Os clientes relatam insatisfação com atrasos, cobrança de frete sem entrega em domicílio e necessidade de retirada na agência dos Correios.",
+      "coerente": true,
+      "n_avaliacoes": 870,
+      "pct_do_grupo": 6.0,
+      "n_textos_distintos": 870,
+      "nota_media": 2.31,
+      "pct_entrega_com_problema": 21.7,
+      "exemplos": [
+        "Quanto ao prazo foi tudo ótimo, só não estou satisfeito porque paguei pelo frete para ser entregue em minha residência, mas não chegou foi para os correios. Tive que ir buscá-lo.",
+        "Embora seja problema dos correios a empresa nao deveria dar um prazo de entrega, apenas se utilizasse transportadora própria. Comprei 4 unidades e só chegou 1",
+        "nao gostei porque demou muito para se entregua tive que compra outro produto mais chegou tudo certinho na proxima talvez chega ante do ´prazo",
+        "recomendo. O correio só fez uma tentativa de entrega e o produto ficou somente 7 dias no correio, depois foi devolvido, o que está causando bastante stress.",
+        "O produto em si é bom, mas a entrega deixou muito a desejar.. Entregaram em sim a do prazo"
+      ],
+      "macrotema": "MP06"
+    },
+    {
+      "id": "P07",
+      "grupo": "problema",
+      "nome": "Não entrega e reembolso",
+      "descricao": "Os clientes relatam a não entrega dos produtos comprados, dificuldades de comunicação e solicitam o cancelamento da compra com o devido estorno ou reembolso do dinheiro.",
+      "coerente": true,
+      "n_avaliacoes": 862,
+      "pct_do_grupo": 6.0,
+      "n_textos_distintos": 862,
+      "nota_media": 1.22,
+      "pct_entrega_com_problema": 67.5,
+      "exemplos": [
+        "Preciso de retorno. Preciso fazer o cancelamento dessa compra pois até agora nada foi entregue",
+        "COMPREI E PAGUEI, O PRODUTO NÃO FOI ENTREGUE. E NÃO OBTIVE RESPOSTA ATÉ O MOMENTO SOBRE O QUE SERÁ FEITO À RESPEITO!!!",
+        "Não recebi,e também NÃO CANCELEI,ASSIM COMO APARECEU NO STATUS...EU QUERO O MEU PRODUTO,POR FAVOR ENVIAR O MEU PRODUTO.",
+        "Não recebi o produto, entrei com o pedido de cancelamento e estorno do valor pago! Aguardo o andamento da solicitação",
+        "não entregou o produto. sem preocupação com o cliente, não há transparência, pois não mantem nenhum canal de comunicação direta. quero o cancelamento e devolução do dinheiro."
+      ],
+      "macrotema": "MP02"
+    },
+    {
+      "id": "P08",
+      "grupo": "problema",
+      "nome": "Não entrega do produto",
+      "descricao": "Os clientes relatam que o produto comprado não foi entregue, não chegou ou não foi recebido.",
+      "coerente": true,
+      "n_avaliacoes": 842,
+      "pct_do_grupo": 5.8,
+      "n_textos_distintos": 702,
+      "nota_media": 1.46,
+      "pct_entrega_com_problema": 36.1,
+      "exemplos": [
+        "Não foi entregue o produto",
+        "Não entregou o produto",
+        "Nao recebino produto",
+        "Nao recebir o produto",
+        "Não entregaram o produto"
+      ],
+      "macrotema": "MP02"
+    },
+    {
+      "id": "P09",
+      "grupo": "problema",
+      "nome": "Produto diferente do anunciado",
+      "descricao": "Os clientes relatam que receberam produtos diferentes da foto, com cores, medidas, materiais ou modelos incorretos em relação ao anunciado no site.",
+      "coerente": true,
+      "n_avaliacoes": 824,
+      "pct_do_grupo": 5.7,
+      "n_textos_distintos": 824,
+      "nota_media": 1.93,
+      "pct_entrega_com_problema": 2.9,
+      "exemplos": [
+        "Recebi porém não veio o produto correto, no site está a foto de um mas com a especificação de outro, fui pela especificação e código, me dei mal, mandaram o produto da foto mas está resolvendo",
+        "produto artesanal, eu mesmo deveria ter feito. nao era o mesmo da foto no site",
+        "Produto diferente. Paguei o frete, porém, não vêm em casa o produto, outra coisa a foto do produto foi uma, o que foi entregue foi outro produto. Que por sua vez não veio pronto pra ser usado, tive que cortar pra usar.",
+        "A capa vendida não é igual à apresentada na foto... Tudo diferente... Furação, textura, acabamento, forma/design... É lamentável como a turma aqui nesse país gosta de passar a perna...",
+        "Deveria colocar mais detalhes do produto no site... Eu comprei pensando que o tapete era daquele tradicional, não parecendo um cobertor... Não tinha foto da parte de trás do tapete no site..."
+      ],
+      "macrotema": "MP03"
+    },
+    {
+      "id": "P10",
+      "grupo": "problema",
+      "nome": "Não recebimento do produto",
+      "descricao": "Os clientes relatam que não receberam o produto, enfrentam atrasos na entrega e não obtêm retorno ou satisfação da empresa.",
+      "coerente": true,
+      "n_avaliacoes": 744,
+      "pct_do_grupo": 5.1,
+      "n_textos_distintos": 734,
+      "nota_media": 1.36,
+      "pct_entrega_com_problema": 70.3,
+      "exemplos": [
+        "Não recebi. Não recebi ainda o produto",
+        "Não chegou. Não recebi meu produto até então",
+        "Nao recebi. ainda nao recebi o produto",
+        "não recebi meu produto e não obtive nenhuma resposta ainda",
+        "não recebi o produto. estou no aguardo do produto e até agora não tive nenhum retorno."
+      ],
+      "macrotema": "MP02"
+    },
+    {
+      "id": "P11",
+      "grupo": "problema",
+      "nome": "Atraso e não entrega do produto",
+      "descricao": "Os clientes relatam atrasos, descumprimento do prazo de entrega, falta de comunicação e casos em que o rastreamento aponta entrega mas o produto não foi recebido.",
+      "coerente": true,
+      "n_avaliacoes": 711,
+      "pct_do_grupo": 4.9,
+      "n_textos_distintos": 711,
+      "nota_media": 1.33,
+      "pct_entrega_com_problema": 66.9,
+      "exemplos": [
+        "Não cumpre o prazo de entrega,até agora não recebi o meu produto.",
+        "Atraso na entrega. Ainda não recebi o produto é já se passou o prazo solicitado.",
+        "Produto não foi entreguem está em atraso e nenhuma satisfação quanto ao ocorrido.",
+        "O produto não foi entregue ainda,e nem uma comunicação pela empresa sobre a entrega..",
+        "foi escrito que o produto já foi entregue, mas não chegou nada :\\"
+      ],
+      "macrotema": "MP01"
+    },
+    {
+      "id": "P12",
+      "grupo": "problema",
+      "nome": "Avaliações mistas e positivas",
+      "descricao": "O grupo mistura avaliações curtas com elogios genéricos e alguns relatos específicos de problemas como atraso e tamanho inadequado.",
+      "coerente": false,
+      "n_avaliacoes": 681,
+      "pct_do_grupo": 4.7,
+      "n_textos_distintos": 357,
+      "nota_media": 2.44,
+      "pct_entrega_com_problema": 17.9,
+      "exemplos": [
+        "Bom",
+        "Super boa",
+        "Muito bom",
+        "Muito boa!",
+        "de boas"
+      ],
+      "macrotema": "MP07"
+    },
+    {
+      "id": "P13",
+      "grupo": "problema",
+      "nome": "Avaliações mistas e positivas",
+      "descricao": "O grupo mistura relatos positivos sobre entrega rápida e qualidade dos produtos com algumas insatisfações pontuais, atrasos ou problemas parciais em pedidos.",
+      "coerente": false,
+      "n_avaliacoes": 589,
+      "pct_do_grupo": 4.1,
+      "n_textos_distintos": 575,
+      "nota_media": 2.61,
+      "pct_entrega_com_problema": 11.0,
+      "exemplos": [
+        "Bom. Ótimo produto entregue no prazo",
+        "Produto bom. Recomendo . Chegou Ntes do prazo.",
+        "Produto entregue. Recomendo",
+        "Ótimo. Muito bom o produto foi entregue antes do prazo",
+        "Muito bom o produto E chegou antes da data prevista .. Muito bom"
+      ],
+      "macrotema": "MP07"
+    },
+    {
+      "id": "P14",
+      "grupo": "problema",
+      "nome": "Produto enviado diferente do comprado",
+      "descricao": "Os clientes relatam que receberam um produto incorreto, diferente do modelo, cor ou item que foi comprado e anunciado.",
+      "coerente": true,
+      "n_avaliacoes": 576,
+      "pct_do_grupo": 4.0,
+      "n_textos_distintos": 575,
+      "nota_media": 1.55,
+      "pct_entrega_com_problema": 11.5,
+      "exemplos": [
+        "Não recebi o produto correto, veio outro produto diferente do que comprei.",
+        "Pedido entregue errado. Fiz uma compra de um produto e recebi outro produto.",
+        "O PRODUTO QUE ME FOI ENVIADO, NAO CONFERE COM O QUE EU PEDI.",
+        "Produto errado. Pedi um produto e recebi outro.",
+        "O produto entregue não corresponde ao produto que eu encomendei."
+      ],
+      "macrotema": "MP03"
+    },
+    {
+      "id": "P15",
+      "grupo": "problema",
+      "nome": "Atraso e não entrega",
+      "descricao": "Os clientes relatam demora excessiva, falta de recebimento dos produtos comprados, ausência de suporte e problemas com parceiros da plataforma.",
+      "coerente": true,
+      "n_avaliacoes": 558,
+      "pct_do_grupo": 3.9,
+      "n_textos_distintos": 558,
+      "nota_media": 1.33,
+      "pct_entrega_com_problema": 49.8,
+      "exemplos": [
+        "decepção. não me deram ao menos satisfação prazo longo de entrega e assim mesmo não cumpriram a lannister tem responsabilidade também e se omitiu quero meu dinheiro reembolso",
+        "Não recomendo. até agora não recebi o que comprei. nunca passei tanto tempo para receber um produto comprado no site das lannister.",
+        "Não recomendo. Não recebi o produto, pois não recomendo esta loja, mais a responsabilidade é das lojas lannister",
+        "Produto nao entregue. Péssimo parceiro da lannister! Nem satisfação ele dá. Quero meu dinheiro de volta. Estou aguardando.",
+        "Não recebi o produto até hoje, não tive o estorno feito até hoje, Não tive meus e-mails respondidos, não tive contato nem da empresa e nem da lannister, um descaso total, não recomendo comprar nada ."
+      ],
+      "macrotema": "MP01"
+    },
+    {
+      "id": "P16",
+      "grupo": "problema",
+      "nome": "Demora e atraso na entrega",
+      "descricao": "Os clientes relatam insatisfação com a demora excessiva e o descumprimento do prazo de entrega.",
+      "coerente": true,
+      "n_avaliacoes": 556,
+      "pct_do_grupo": 3.8,
+      "n_textos_distintos": 509,
+      "nota_media": 1.86,
+      "pct_entrega_com_problema": 50.2,
+      "exemplos": [
+        "Demora. O produto não foi enviado no prazo",
+        "Demorando muito a entrega",
+        "Demorou muito a entrega",
+        "Muita demora. O prazo de entrega foi longo demais",
+        "Demora muito pra entregar os produtos"
+      ],
+      "macrotema": "MP01"
+    },
+    {
+      "id": "P17",
+      "grupo": "problema",
+      "nome": "Atraso na entrega",
+      "descricao": "Os clientes relatam que ainda não receberam os produtos comprados e continuam aguardando a entrega.",
+      "coerente": true,
+      "n_avaliacoes": 492,
+      "pct_do_grupo": 3.4,
+      "n_textos_distintos": 333,
+      "nota_media": 1.44,
+      "pct_entrega_com_problema": 69.1,
+      "exemplos": [
+        "Ainda não recebi meu produto",
+        "Não recebi meu produto ainda",
+        "Ainda nã recebi o produto",
+        "Meu produto não foi entregue ainda",
+        "ainda nao veio o produto"
+      ],
+      "macrotema": "MP01"
+    },
+    {
+      "id": "P18",
+      "grupo": "problema",
+      "nome": "Entrega incompleta de produtos",
+      "descricao": "Os clientes relatam que compraram mais de uma unidade ou múltiplos itens, mas receberam apenas parte do pedido.",
+      "coerente": true,
+      "n_avaliacoes": 447,
+      "pct_do_grupo": 3.1,
+      "n_textos_distintos": 446,
+      "nota_media": 1.58,
+      "pct_entrega_com_problema": 5.1,
+      "exemplos": [
+        "Comprei dois itens e só foi entregue um,e até agora estou aguardando respostas.",
+        "Comprei dois produtos iguais e so me entregaram um. Ainda estou no aguardo da entrega do segundo que nao venho.",
+        "Comprei 2 unidades,porém, só recebi 1 unidade do produto.",
+        "comprei duas unidades da mangueira. apenas 01 foi entregue.",
+        "Adquiri duas unidades do produto e apenas uma chegou. E nao tenho noticia da outra."
+      ],
+      "macrotema": "MP04"
+    },
+    {
+      "id": "P19",
+      "grupo": "problema",
+      "nome": "Quantidade incorreta de itens enviados",
+      "descricao": "Os clientes relatam que receberam menos unidades ou itens do que o comprado.",
+      "coerente": true,
+      "n_avaliacoes": 432,
+      "pct_do_grupo": 3.0,
+      "n_textos_distintos": 430,
+      "nota_media": 1.61,
+      "pct_entrega_com_problema": 4.6,
+      "exemplos": [
+        "Comprei 2 mas só recebi 1",
+        "Comprei 2 produtos entregaram apenas 1",
+        "comprei (02)Duas unidades e recebi apenas 01",
+        "Comprei 2 unidades é só chegou uma",
+        "Comprei 2 unidades e chegou somente 1."
+      ],
+      "macrotema": "MP04"
+    },
+    {
+      "id": "P20",
+      "grupo": "problema",
+      "nome": "Problemas com a entrega",
+      "descricao": "Os clientes relatam que não receberam o produto comprado, sofreram atrasos ou enfrentaram cancelamentos e indisponibilidade de estoque.",
+      "coerente": true,
+      "n_avaliacoes": 411,
+      "pct_do_grupo": 2.8,
+      "n_textos_distintos": 244,
+      "nota_media": 1.35,
+      "pct_entrega_com_problema": 60.6,
+      "exemplos": [
+        "Não recebi o produto.",
+        "O produto nao foi entregue.",
+        "Meu produto nao foi entregue.",
+        "Produto não chegou na data.",
+        "Não chegou. o produto não chegou."
+      ],
+      "macrotema": "MP02"
+    },
+    {
+      "id": "E01",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes elogiam a qualidade dos produtos e destacam principalmente que a entrega ocorreu antes do prazo previsto.",
+      "coerente": true,
+      "n_avaliacoes": 2458,
+      "pct_do_grupo": 8.8,
+      "n_textos_distintos": 2435,
+      "nota_media": 4.92,
+      "pct_entrega_com_problema": 0.9,
+      "exemplos": [
+        "super recomendo. foi entregue muito antes do prazo e produto muito bom",
+        "Perfeito. Super recomendo entregou antes do prazo determinado muito obrigado",
+        "Super Recomendo. Muito bom, chegou bem antes do prazo combinado. excelente!!!!!",
+        "Super recomendo. Produto entregue antes do prazo. Recomendo",
+        "Perfeito, entrega antes do prazo. produto excelente.Estou muito satisfeita"
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E02",
+      "grupo": "elogio",
+      "nome": "Elogio geral à qualidade",
+      "descricao": "Os clientes expressam satisfação geral com elogios curtos à qualidade, conforto e eficiência dos produtos.",
+      "coerente": true,
+      "n_avaliacoes": 2251,
+      "pct_do_grupo": 8.1,
+      "n_textos_distintos": 304,
+      "nota_media": 4.85,
+      "pct_entrega_com_problema": 2.4,
+      "exemplos": [
+        "Muito bom",
+        "Ótimo",
+        "Muito excelente",
+        "Muito ótimo",
+        "Ótimo muito"
+      ],
+      "macrotema": "ME02"
+    },
+    {
+      "id": "E03",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes elogiam a qualidade dos produtos e destacam principalmente que a entrega foi realizada antes do prazo previsto.",
+      "coerente": true,
+      "n_avaliacoes": 2027,
+      "pct_do_grupo": 7.3,
+      "n_textos_distintos": 1945,
+      "nota_media": 4.86,
+      "pct_entrega_com_problema": 0.9,
+      "exemplos": [
+        "Produto entregue antes do prazo. Muito bom.",
+        "Excelente. Excelente produto. Entrega feita antes do prazo.",
+        "Recomendo. Produto entregue antes do prazo excelentes.",
+        "Ótimo. Entrega antes do prazo. Produto ótimo.",
+        "Ótimo. Produto entregue antes do prazo determinado. Recomendo"
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E04",
+      "grupo": "elogio",
+      "nome": "Elogio à qualidade e atendimento",
+      "descricao": "Os clientes expressam alta satisfação com a qualidade dos produtos, o atendimento e a rapidez, recomendando a compra.",
+      "coerente": true,
+      "n_avaliacoes": 1762,
+      "pct_do_grupo": 6.3,
+      "n_textos_distintos": 1673,
+      "nota_media": 4.9,
+      "pct_entrega_com_problema": 3.1,
+      "exemplos": [
+        "Bom atendimento. Produto ótimo, super recomendo.",
+        "Excelente, recomendo. Ótimo produto",
+        "Ótima. Produto excelente fiquei muito satisfeito.",
+        "Recomendo. Produto de ótima qualidade. Muito satisfeito.",
+        "Excelente. Produto muito bom, recomendo."
+      ],
+      "macrotema": "ME03"
+    },
+    {
+      "id": "E05",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes elogiam a entrega dentro ou antes do prazo, a boa qualidade dos produtos e o cuidado com a embalagem.",
+      "coerente": true,
+      "n_avaliacoes": 1759,
+      "pct_do_grupo": 6.3,
+      "n_textos_distintos": 1755,
+      "nota_media": 4.81,
+      "pct_entrega_com_problema": 2.9,
+      "exemplos": [
+        "produto entregue antes do prazo e em perfeita condição. Recomendo.",
+        "Ótimo. Produto entregue antes do prazo. Bem embalado. Recomendo.",
+        "Recomendo. Produto recebido em perfeito estado e no prazo.",
+        "Muito bom. Produto entregue corretamente e antes do prazo informado.",
+        "Excelente. Produto entregue dentro do prazo e conforme anunciado. Muito bom."
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E06",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes elogiam a pontualidade, destacando que os produtos são entregues antes do prazo, em perfeito estado e com ótima qualidade.",
+      "coerente": true,
+      "n_avaliacoes": 1679,
+      "pct_do_grupo": 6.0,
+      "n_textos_distintos": 1678,
+      "nota_media": 4.9,
+      "pct_entrega_com_problema": 2.2,
+      "exemplos": [
+        "Eu recomendo essa loja recebi meu produto antes do tempo e veio direitinho.. estão de parabéns",
+        "Otima loja,compras entregues no prazo,e veio o que eu esperava.Recomendadissimo.",
+        "Entregá. Vcs estão de parabéns o produto foi entregue antes do prazo e adorei o produto indicaria com certeza essa loja obg",
+        "Produto de excelente qualidade, vendedores responsáveis, entrega no prazo... Super satisfeita.",
+        "Excelente. Loja que respeita o consumidor. Produto entregue dentro do prazo, em perfeito estado."
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E07",
+      "grupo": "elogio",
+      "nome": "Problemas com pedidos incompletos e frete",
+      "descricao": "Os clientes relatam divergências na quantidade de itens recebidos, entregues em separado, além de insatisfação com cobranças de frete e retirada nos correios.",
+      "coerente": true,
+      "n_avaliacoes": 1622,
+      "pct_do_grupo": 5.8,
+      "n_textos_distintos": 1618,
+      "nota_media": 4.36,
+      "pct_entrega_com_problema": 9.7,
+      "exemplos": [
+        "O problema foi do site. Pois chegou dois pedidos iguais. Mas tá de boas",
+        "Eu recebi mas compreo o produto errado,queria ver para poder trocar. obrigado",
+        "Não tenho o que reclamar mais meu produto veio com uma das embalagens rasgada . Mais atenção da próxima vez",
+        "Foi me entregue 1 produto sendo que eu comprei 2 produtos do mesmo . Ainda esperando a entrega se não ocorrerá ida a justiça.",
+        "O unico detalhe e q co.prei 2 iguais e veio em duas caixas separadas e poderia ter vi do em 1 caixa e diminuir o valor do frete so esse detalahe me chamou atencao."
+      ],
+      "macrotema": "ME05"
+    },
+    {
+      "id": "E08",
+      "grupo": "elogio",
+      "nome": "Satisfação geral com a compra",
+      "descricao": "Os clientes elogiam a experiência de compra, destacando que tudo ocorreu perfeitamente e sem problemas.",
+      "coerente": true,
+      "n_avaliacoes": 1586,
+      "pct_do_grupo": 5.7,
+      "n_textos_distintos": 1071,
+      "nota_media": 4.79,
+      "pct_entrega_com_problema": 3.0,
+      "exemplos": [
+        "Excelente. Tudo certo",
+        "Ótima. Tudo certo",
+        "Otimo. Deu tudo certo",
+        "muito BOM. Tudo certo",
+        "MUITO bom. Deu tudo certo"
+      ],
+      "macrotema": "ME05"
+    },
+    {
+      "id": "E09",
+      "grupo": "elogio",
+      "nome": "Prazo de entrega e qualidade",
+      "descricao": "Os clientes avaliam positivamente os produtos e recomendam a compra, mas comentam bastante sobre o prazo de entrega, variando entre atrasos e entregas antes do previsto.",
+      "coerente": true,
+      "n_avaliacoes": 1540,
+      "pct_do_grupo": 5.5,
+      "n_textos_distintos": 1539,
+      "nota_media": 4.48,
+      "pct_entrega_com_problema": 8.6,
+      "exemplos": [
+        "Recomendo. Excelente produto. Só houve muito atraso na entrega.",
+        "poderia demorar menos pra chegar né kkkkkk... mas foi bom, chegou o produto certo!!!",
+        "Quanto a entrega, foi muito antes do prazo, agora falta saber a qualidade do produto...",
+        "recomendo. Demorou um pouco a entrega mais fui avisada e no mais tudo certo o produto chegou e gostei.",
+        "fiquei satisfeito , quando comprei não gostei do prazo de entrega , mais tudo ok, chegou bem antes"
+      ],
+      "macrotema": "ME05"
+    },
+    {
+      "id": "E10",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes elogiam a pontualidade da entrega, destacando que os produtos chegam bem antes do prazo previsto.",
+      "coerente": true,
+      "n_avaliacoes": 1509,
+      "pct_do_grupo": 5.4,
+      "n_textos_distintos": 1220,
+      "nota_media": 4.79,
+      "pct_entrega_com_problema": 2.1,
+      "exemplos": [
+        "Chegou certinho antes prazo",
+        "chegou bem antes do prazo previsto",
+        "Produto entregue antes do prazo excelente",
+        "Produto entregue bem antes do prazo previsto",
+        "Produto entregue bem antes do prazo determinado"
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E11",
+      "grupo": "elogio",
+      "nome": "Elogio à qualidade e beleza",
+      "descricao": "Os clientes elogiam a boa qualidade, a beleza e o acabamento dos produtos adquiridos.",
+      "coerente": true,
+      "n_avaliacoes": 1307,
+      "pct_do_grupo": 4.7,
+      "n_textos_distintos": 1306,
+      "nota_media": 4.72,
+      "pct_entrega_com_problema": 2.2,
+      "exemplos": [
+        "recomendo. produto bonito, levíssimo e super bem acabado.",
+        "Gostei. Gostei do produto Boa aparência",
+        "Amei.Produto lindo, de otima qualidade.",
+        "Muito bonito, e atende o que diz! otimo produto!",
+        "Muito bom. Tamanho ideal , lindo de boa qualidade , amei"
+      ],
+      "macrotema": "ME04"
+    },
+    {
+      "id": "E12",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes expressam extrema satisfação com a agilidade e a rapidez na entrega dos produtos.",
+      "coerente": true,
+      "n_avaliacoes": 1251,
+      "pct_do_grupo": 4.5,
+      "n_textos_distintos": 960,
+      "nota_media": 4.85,
+      "pct_entrega_com_problema": 0.5,
+      "exemplos": [
+        "Entrega muito rápido",
+        "entrega rápida. ótimo",
+        "Recomendo. Rapidez na entrega",
+        "rápida entrega. ótima",
+        "ENTREGA MUITO RAPIDA"
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E13",
+      "grupo": "elogio",
+      "nome": "Elogio e recomendação da loja",
+      "descricao": "Os clientes expressam alta satisfação geral com a loja, destacando a confiabilidade, bons preços e recomendando a experiência de compra.",
+      "coerente": true,
+      "n_avaliacoes": 1121,
+      "pct_do_grupo": 4.0,
+      "n_textos_distintos": 1025,
+      "nota_media": 4.81,
+      "pct_entrega_com_problema": 3.3,
+      "exemplos": [
+        "Ótima loja eu recomendo",
+        "Top. Top essa loja",
+        "compra certa, recomendo a loja",
+        "lannister essa loja e muito boa recomendo",
+        "Ótima loja realmente recomendo"
+      ],
+      "macrotema": "ME03"
+    },
+    {
+      "id": "E14",
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Os clientes relatam satisfação com a entrega, destacando que os produtos chegaram no prazo ou antes do previsto.",
+      "coerente": true,
+      "n_avaliacoes": 1103,
+      "pct_do_grupo": 4.0,
+      "n_textos_distintos": 903,
+      "nota_media": 4.74,
+      "pct_entrega_com_problema": 3.2,
+      "exemplos": [
+        "Produto entregue. Chegou antes do prazo.",
+        "Produto entregue corretamente, entregue antes do prazo.",
+        "Produto foi entregue antes do prazo.",
+        "Produto entregue antes da data prevista.",
+        "chegou em ordem dentro do prazo."
+      ],
+      "macrotema": "ME01"
+    },
+    {
+      "id": "E15",
+      "grupo": "elogio",
+      "nome": "Recomendação e satisfação geral",
+      "descricao": "Os clientes expressam satisfação com a compra e recomendam o produto de forma positiva, incluindo menções à marca Lannister.",
+      "coerente": true,
+      "n_avaliacoes": 1050,
+      "pct_do_grupo": 3.8,
+      "n_textos_distintos": 231,
+      "nota_media": 4.8,
+      "pct_entrega_com_problema": 3.6,
+      "exemplos": [
+        "Excelente recomendo",
+        "Boa recomendo",
+        "Recomendo",
+        "super recomendo",
+        "Recomendo. Bom"
+      ],
+      "macrotema": "ME05"
+    },
+    {
+      "id": "E16",
+      "grupo": "elogio",
+      "nome": "Elogio genérico à compra",
+      "descricao": "Os clientes expressam satisfação geral com a compra usando elogios curtos e positivos sobre os produtos ou serviços.",
+      "coerente": true,
+      "n_avaliacoes": 971,
+      "pct_do_grupo": 3.5,
+      "n_textos_distintos": 195,
+      "nota_media": 4.68,
+      "pct_entrega_com_problema": 3.8,
+      "exemplos": [
+        "bom",
+        "boa",
+        "Bom l",
+        "bom tmb",
+        "bom de mais"
+      ],
+      "macrotema": "ME05"
+    },
+    {
+      "id": "E17",
+      "grupo": "elogio",
+      "nome": "Qualidade e aprovação do produto",
+      "descricao": "Os clientes expressam satisfação com a qualidade e o bom funcionamento dos produtos recebidos.",
+      "coerente": true,
+      "n_avaliacoes": 963,
+      "pct_do_grupo": 3.5,
+      "n_textos_distintos": 645,
+      "nota_media": 4.75,
+      "pct_entrega_com_problema": 3.8,
+      "exemplos": [
+        "Produto muito bom",
+        "Muito bom o produto",
+        "Produto ótimo",
+        "Um ótimo produto",
+        "Muito bom esse produto"
+      ],
+      "macrotema": "ME02"
+    },
+    {
+      "id": "E18",
+      "grupo": "elogio",
+      "nome": "Elogio à qualidade do produto",
+      "descricao": "Os clientes expressam satisfação com a ótima qualidade, bom custo-benefício e fidelidade à descrição dos produtos.",
+      "coerente": true,
+      "n_avaliacoes": 822,
+      "pct_do_grupo": 3.0,
+      "n_textos_distintos": 442,
+      "nota_media": 4.77,
+      "pct_entrega_com_problema": 2.2,
+      "exemplos": [
+        "Ótimo produto.",
+        "Excelente produto.",
+        "Muito bom produto.",
+        "Qualidade. Ótimo produto.",
+        "Ótimo produto. Produto de boa qualidade."
+      ],
+      "macrotema": "ME02"
+    },
+    {
+      "id": "E19",
+      "grupo": "elogio",
+      "nome": "Elogio à beleza e qualidade do produto",
+      "descricao": "Os clientes expressam alta satisfação com avaliações muito positivas, destacando que os produtos são lindos, fofinhos, macios e superam as expectativas.",
+      "coerente": true,
+      "n_avaliacoes": 645,
+      "pct_do_grupo": 2.3,
+      "n_textos_distintos": 514,
+      "nota_media": 4.8,
+      "pct_entrega_com_problema": 2.5,
+      "exemplos": [
+        "Lindo ...Amei",
+        "Adorooo",
+        "Maravilhosooo. Ameeei",
+        "Otima... Adorei....",
+        "Superou!!!"
+      ],
+      "macrotema": "ME04"
+    },
+    {
+      "id": "E20",
+      "grupo": "elogio",
+      "nome": "Avaliações positivas genéricas e curtas",
+      "descricao": "Os clientes expressam satisfação geral com notas altas, elogios breves e palavras isoladas.",
+      "coerente": true,
+      "n_avaliacoes": 365,
+      "pct_do_grupo": 1.3,
+      "n_textos_distintos": 96,
+      "nota_media": 4.77,
+      "pct_entrega_com_problema": 3.0,
+      "exemplos": [
+        "OK",
+        "Super",
+        "Top",
+        "Top top",
+        "10 top"
+      ],
+      "macrotema": "ME05"
+    }
+  ],
+  "macrotemas": [
+    {
+      "grupo": "problema",
+      "nome": "Atraso na entrega",
+      "descricao": "Clientes reclamam de demora excessiva, prazos vencidos e falta de recebimento dentro do período combinado.",
+      "temas": [
+        "P05",
+        "P11",
+        "P15",
+        "P16",
+        "P17"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 3255,
+      "pct_do_grupo": 22.5,
+      "nota_media": 1.43,
+      "pct_entrega_com_problema": 66.0,
+      "id": "MP01"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Não entrega do pedido",
+      "descricao": "Relatos de pedidos totalmente não entregues, sumiço de mercadorias e solicitações de reembolso ou cancelamento.",
+      "temas": [
+        "P07",
+        "P08",
+        "P10",
+        "P20"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 2859,
+      "pct_do_grupo": 19.8,
+      "nota_media": 1.35,
+      "pct_entrega_com_problema": 58.0,
+      "id": "MP02"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Produto errado ou divergente",
+      "descricao": "Recebimento de itens incorretos, com cor, tamanho ou modelo diferentes do anunciado no site.",
+      "temas": [
+        "P04",
+        "P09",
+        "P14"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 2351,
+      "pct_do_grupo": 16.3,
+      "nota_media": 1.64,
+      "pct_entrega_com_problema": 6.6,
+      "id": "MP03"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Entrega incompleta",
+      "descricao": "Clientes que receberam apenas parte dos itens ou unidades compradas e enfrentam dificuldades para obter o restante.",
+      "temas": [
+        "P03",
+        "P18",
+        "P19"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 1841,
+      "pct_do_grupo": 12.7,
+      "nota_media": 1.56,
+      "pct_entrega_com_problema": 5.4,
+      "id": "MP04"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Baixa qualidade do produto",
+      "descricao": "Insatisfação com acabamento inferior, fragilidade dos materiais e defeitos de fabricação.",
+      "temas": [
+        "P01"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 1025,
+      "pct_do_grupo": 7.1,
+      "nota_media": 2.14,
+      "pct_entrega_com_problema": 4.6,
+      "id": "MP05"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Problemas de logística e frete",
+      "descricao": "Dificuldades com os Correios, cobrança de frete sem entrega em domicílio e necessidade de retirada em agência.",
+      "temas": [
+        "P06"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 870,
+      "pct_do_grupo": 6.0,
+      "nota_media": 2.31,
+      "pct_entrega_com_problema": 21.7,
+      "id": "MP06"
+    },
+    {
+      "grupo": "problema",
+      "nome": "Avaliações mistas ou genéricas",
+      "descricao": "Comentários vagos, misturados, curtos ou que combinam elogios genéricos com pequenas queixas pontuais.",
+      "temas": [
+        "P02",
+        "P12",
+        "P13"
+      ],
+      "mistos": true,
+      "n_avaliacoes": 2259,
+      "pct_do_grupo": 15.6,
+      "nota_media": 1.93,
+      "pct_entrega_com_problema": 24.7,
+      "id": "MP07"
+    },
+    {
+      "grupo": "elogio",
+      "nome": "Elogio à entrega rápida",
+      "descricao": "Clientes destacam a agilidade, pontualidade e o recebimento dos produtos antes do prazo previsto.",
+      "temas": [
+        "E01",
+        "E03",
+        "E05",
+        "E06",
+        "E10",
+        "E12",
+        "E14"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 11786,
+      "pct_do_grupo": 42.4,
+      "nota_media": 4.85,
+      "pct_entrega_com_problema": 1.7,
+      "id": "ME01"
+    },
+    {
+      "grupo": "elogio",
+      "nome": "Qualidade dos produtos",
+      "descricao": "Avaliações positivas sobre a durabilidade, bom funcionamento e ótimo custo-benefício dos itens adquiridos.",
+      "temas": [
+        "E02",
+        "E17",
+        "E18"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 4036,
+      "pct_do_grupo": 14.5,
+      "nota_media": 4.81,
+      "pct_entrega_com_problema": 2.7,
+      "id": "ME02"
+    },
+    {
+      "grupo": "elogio",
+      "nome": "Qualidade e atendimento geral",
+      "descricao": "Elogios direcionados ao atendimento, à experiência de compra e à satisfação geral com a loja.",
+      "temas": [
+        "E04",
+        "E13"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 2883,
+      "pct_do_grupo": 10.4,
+      "nota_media": 4.87,
+      "pct_entrega_com_problema": 3.2,
+      "id": "ME03"
+    },
+    {
+      "grupo": "elogio",
+      "nome": "Beleza e acabamento",
+      "descricao": "Clientes elogiam o design, o capricho no acabamento e a beleza estética dos produtos.",
+      "temas": [
+        "E11",
+        "E19"
+      ],
+      "mistos": false,
+      "n_avaliacoes": 1952,
+      "pct_do_grupo": 7.0,
+      "nota_media": 4.75,
+      "pct_entrega_com_problema": 2.3,
+      "id": "ME04"
+    },
+    {
+      "grupo": "elogio",
+      "nome": "Avaliações mistas ou genéricas",
+      "descricao": "Comentários muito curtos, genéricos ou que misturam elogios com pequenas ressalvas sobre frete e prazos.",
+      "temas": [
+        "E07",
+        "E08",
+        "E09",
+        "E15",
+        "E16",
+        "E20"
+      ],
+      "mistos": true,
+      "n_avaliacoes": 7134,
+      "pct_do_grupo": 25.7,
+      "nota_media": 4.61,
+      "pct_entrega_com_problema": 5.9,
+      "id": "ME05"
+    }
+  ]
+}

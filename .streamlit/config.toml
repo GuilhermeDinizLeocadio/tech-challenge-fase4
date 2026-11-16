@@ -1,0 +1,10 @@
+# Configuração do Streamlit para este projeto.
+[server]
+# O "vigia de arquivos" percorre todos os pacotes carregados para recarregar a página ao salvar
+# código. Com o transformers, isso gera centenas de avisos sobre modelos de imagem que o projeto
+# não usa (exigem o torchvision). Desligado: para ver uma mudança no código, reinicie o app.
+fileWatcherType = "none"
+
+[browser]
+# Não enviar estatísticas de uso ao Streamlit.
+gatherUsageStats = false
